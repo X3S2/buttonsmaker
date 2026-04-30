@@ -6,7 +6,22 @@ Versionierung nach `X.Y.Z` (siehe README).
 
 ---
 
-## [0.1.1] – 2026-04-30 16:52
+## [0.1.2] – 2026-04-30 17:14
+
+### Hinzugefügt
+- **Bild verschieben**: Im Button-Editor können Hintergrundbilder per Drag&Drop innerhalb des Buttons repositioniert werden (interaktives Canvas-Widget)
+- **Zoom-Schieberegler**: Bild lässt sich von 0.5× bis 3× zoomen
+- **Pipette (Eyedropper)**: Klick auf den Pipette-Button + Klick ins Bild übernimmt die Pixelfarbe als Hintergrundfarbe (Außenbereich/Falz)
+- **Position zurücksetzen**: Reset-Button setzt Offset und Zoom auf Standardwerte zurück
+- Bild-Positionierung wird korrekt im SVG-Rendering übernommen (Cover-Berechnung mit Offset und Zoom)
+
+### Geändert
+- Bild-Rendering: von SVG-Pattern auf direkte `<image>`-Elemente mit exakter Cover-Positionierung (benötigt gespeicherte Natural-Dimensionen)
+- `ButtonConfig` um Felder `imgNaturalW/H`, `imgX`, `imgY`, `imgScale` erweitert; Rückwärts-Kompatibilität zu älteren Saves bleibt erhalten
+
+---
+
+
 
 ### Geändert
 - Button-Abstand: fester Mindestabstand von 2 mm zwischen den Außenkreisen benachbarter Buttons (horizontal und vertikal), überschüssiger Platz wird als Rand verteilt

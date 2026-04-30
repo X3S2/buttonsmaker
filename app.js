@@ -1,5 +1,5 @@
 /* ============================================================
-   ButtonsMaker – app.js  v0.1.1
+   ButtonsMaker – app.js  v0.1.2
    Pure HTML/CSS/JS – keine Abhängigkeiten
    ============================================================ */
 
@@ -59,6 +59,11 @@ function makeEmptyButtonConfig() {
     id: makeId(),
     bgColor: '#ffffff',
     bgImage: null,
+    imgNaturalW: null,
+    imgNaturalH: null,
+    imgX: 0,
+    imgY: 0,
+    imgScale: 1,
     texts: [],
   };
 }
@@ -159,48 +164,42 @@ function renderButtonSVG(config, outerMm, innerMm, sizePx, isPreview) {
   clipPath.appendChild(clipCircle);
   defs.appendChild(clipPath);
 
-  // ---- background fill (outer circle) ----
+  // ---- background fill (outer circle) + optional image ----
+  svg.appendChild(defs);
+
+  // Outer circle background (bgColor always fills the fold-over area)
+  const bgOuter = document.createElementNS(SVG_NS, 'circle');
+  bgOuter.setAttribute('cx', String(cx)); bgOuter.setAttribute('cy', String(cy));
+  bgOuter.setAttribute('r', String(outerR));
+  bgOuter.setAttribute('fill', config.bgColor || '#ffffff');
+  svg.appendChild(bgOuter);
+
   if (config.bgImage) {
-    // Background image as pattern filling outer circle
-    const patId = 'pat-' + config.id + (isPreview ? '-prev' : '');
-    const pattern = document.createElementNS(SVG_NS, 'pattern');
-    pattern.setAttribute('id', patId);
-    pattern.setAttribute('patternUnits', 'userSpaceOnUse');
-    pattern.setAttribute('x', String(cx - innerR));
-    pattern.setAttribute('y', String(cy - innerR));
-    pattern.setAttribute('width', String(innerR * 2));
-    pattern.setAttribute('height', String(innerR * 2));
-    const img = document.createElementNS(SVG_NS, 'image');
-    img.setAttribute('href', config.bgImage);
-    img.setAttribute('width', String(innerR * 2));
-    img.setAttribute('height', String(innerR * 2));
-    img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
-    pattern.appendChild(img);
-    defs.appendChild(pattern);
+    const imgEl = document.createElementNS(SVG_NS, 'image');
+    imgEl.setAttribute('href', config.bgImage);
+    imgEl.setAttribute('clip-path', `url(#${clipId})`);
 
-    // outer bg first (colour)
-    const bgOuter = document.createElementNS(SVG_NS, 'circle');
-    bgOuter.setAttribute('cx', String(cx)); bgOuter.setAttribute('cy', String(cy));
-    bgOuter.setAttribute('r', String(outerR));
-    bgOuter.setAttribute('fill', config.bgColor || '#ffffff');
-    svg.appendChild(defs);
-    svg.appendChild(bgOuter);
-
-    // inner image
-    const imgCircle = document.createElementNS(SVG_NS, 'circle');
-    imgCircle.setAttribute('cx', String(cx)); imgCircle.setAttribute('cy', String(cy));
-    imgCircle.setAttribute('r', String(innerR));
-    imgCircle.setAttribute('fill', `url(#${patId})`);
-    imgCircle.setAttribute('clip-path', `url(#${clipId})`);
-    svg.appendChild(imgCircle);
-  } else {
-    svg.appendChild(defs);
-    // Solid background covering outer circle area
-    const bgOuter = document.createElementNS(SVG_NS, 'circle');
-    bgOuter.setAttribute('cx', String(cx)); bgOuter.setAttribute('cy', String(cy));
-    bgOuter.setAttribute('r', String(outerR));
-    bgOuter.setAttribute('fill', config.bgColor || '#ffffff');
-    svg.appendChild(bgOuter);
+    const { imgNaturalW, imgNaturalH, imgX = 0, imgY = 0, imgScale = 1 } = config;
+    if (imgNaturalW && imgNaturalH) {
+      // Cover positioning with user-defined offset and zoom
+      const innerD = innerR * 2;
+      const coverScale = Math.max(innerD / imgNaturalW, innerD / imgNaturalH) * imgScale;
+      const scaledW = imgNaturalW * coverScale;
+      const scaledH = imgNaturalH * coverScale;
+      imgEl.setAttribute('x', String(cx - scaledW / 2 + imgX));
+      imgEl.setAttribute('y', String(cy - scaledH / 2 + imgY));
+      imgEl.setAttribute('width', String(scaledW));
+      imgEl.setAttribute('height', String(scaledH));
+      imgEl.setAttribute('preserveAspectRatio', 'none');
+    } else {
+      // Fallback for configs saved before v0.1.2
+      imgEl.setAttribute('x', String(cx - innerR));
+      imgEl.setAttribute('y', String(cy - innerR));
+      imgEl.setAttribute('width', String(innerR * 2));
+      imgEl.setAttribute('height', String(innerR * 2));
+      imgEl.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+    }
+    svg.appendChild(imgEl);
   }
 
   // ---- Text layers (clipped to inner circle) ----
@@ -445,6 +444,20 @@ function openEditor(pageId, slotIndex) {
   // Reset image input
   document.getElementById('ed-bg-image').value = '';
 
+  // Init widget (lazy) and show/hide image section
+  if (!imgWidget) imgWidget = new ImagePositionWidget();
+  const imgSection = document.getElementById('img-pos-section');
+  if (editingConfig.bgImage) {
+    imgSection.classList.remove('hidden');
+    const zoomVal = editingConfig.imgScale || 1;
+    document.getElementById('img-zoom').value = String(zoomVal);
+    document.getElementById('img-zoom-val').textContent = `${zoomVal.toFixed(1)}×`;
+    imgWidget.load(editingConfig.bgImage);
+  } else {
+    imgSection.classList.add('hidden');
+    imgWidget.clear();
+  }
+
   // Render text layers
   renderTextsList();
 
@@ -614,6 +627,8 @@ function updateEditorPreview() {
   container.innerHTML = '';
   const svg = renderButtonSVG(editingConfig, outer, inner, previewSize, true);
   container.appendChild(svg);
+  // Keep canvas widget in sync (bgColor changes etc.)
+  if (imgWidget && editingConfig.bgImage) imgWidget.render();
 }
 
 // ============================================================
@@ -855,6 +870,147 @@ function clearSelectedSlot() {
 }
 
 // ============================================================
+// IMAGE POSITION WIDGET
+// ============================================================
+
+class ImagePositionWidget {
+  constructor() {
+    this.canvas = document.getElementById('img-pos-canvas');
+    this.ctx = this.canvas.getContext('2d');
+    this.eyedropperMode = false;
+    this.isDragging = false;
+    this.dragStart = null;
+    this.imgEl = new Image();
+    this.imgLoaded = false;
+    this._bindEvents();
+  }
+
+  load(src) {
+    this.imgLoaded = false;
+    this.imgEl.onload = () => { this.imgLoaded = true; this.render(); };
+    this.imgEl.src = src;
+  }
+
+  clear() {
+    this.imgLoaded = false;
+    this.imgEl.src = '';
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  setEyedropper(on) {
+    this.eyedropperMode = on;
+    this.canvas.classList.toggle('eyedropper-mode', on);
+    document.getElementById('eyedropper-hint').classList.toggle('hidden', !on);
+    document.getElementById('btn-eyedropper').classList.toggle('active', on);
+  }
+
+  render() {
+    if (!editingConfig) return;
+    const { inner, outer } = project.buttonSize;
+    const cpx = this.canvas.width;
+    const pxPerMm = cpx / outer;
+    const cx = cpx / 2;
+    const cy = cpx / 2;
+    const outerRpx = (outer / 2) * pxPerMm;
+    const innerRpx = (inner / 2) * pxPerMm;
+    const ctx = this.ctx;
+
+    ctx.clearRect(0, 0, cpx, cpx);
+
+    // Outer circle bg color
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerRpx, 0, Math.PI * 2);
+    ctx.fillStyle = editingConfig.bgColor || '#ffffff';
+    ctx.fill();
+    ctx.restore();
+
+    // Image clipped to inner circle
+    if (this.imgLoaded) {
+      const { imgX = 0, imgY = 0, imgScale = 1 } = editingConfig;
+      const innerD = innerRpx * 2;
+      const natW = this.imgEl.naturalWidth;
+      const natH = this.imgEl.naturalHeight;
+      const coverScale = Math.max(innerD / natW, innerD / natH) * imgScale;
+      const scaledW = natW * coverScale;
+      const scaledH = natH * coverScale;
+      const ix = cx - scaledW / 2 + imgX * pxPerMm;
+      const iy = cy - scaledH / 2 + imgY * pxPerMm;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, innerRpx, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(this.imgEl, ix, iy, scaledW, scaledH);
+      ctx.restore();
+    }
+
+    // Guide circles
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerRpx - 1, 0, Math.PI * 2);
+    ctx.strokeStyle = '#2196f3';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, innerRpx, 0, Math.PI * 2);
+    ctx.strokeStyle = '#e53935';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  _bindEvents() {
+    const c = this.canvas;
+
+    c.addEventListener('mousedown', e => {
+      if (this.eyedropperMode) return;
+      e.preventDefault();
+      this.isDragging = true;
+      this.dragStart = {
+        x: e.offsetX, y: e.offsetY,
+        imgX: editingConfig ? (editingConfig.imgX || 0) : 0,
+        imgY: editingConfig ? (editingConfig.imgY || 0) : 0,
+      };
+      c.style.cursor = 'grabbing';
+    });
+
+    c.addEventListener('mousemove', e => {
+      if (!this.isDragging || !editingConfig) return;
+      const pxPerMm = this.canvas.width / project.buttonSize.outer;
+      editingConfig.imgX = this.dragStart.imgX + (e.offsetX - this.dragStart.x) / pxPerMm;
+      editingConfig.imgY = this.dragStart.imgY + (e.offsetY - this.dragStart.y) / pxPerMm;
+      this.render();
+      updateEditorPreview();
+    });
+
+    c.addEventListener('mouseup', () => {
+      this.isDragging = false;
+      if (!this.eyedropperMode) c.style.cursor = 'grab';
+    });
+
+    c.addEventListener('mouseleave', () => {
+      this.isDragging = false;
+    });
+
+    c.addEventListener('click', e => {
+      if (!this.eyedropperMode) return;
+      const pixel = this.ctx.getImageData(e.offsetX, e.offsetY, 1, 1).data;
+      const hex = '#' + [pixel[0], pixel[1], pixel[2]]
+        .map(v => v.toString(16).padStart(2, '0')).join('');
+      if (editingConfig) editingConfig.bgColor = hex;
+      document.getElementById('ed-bg-color').value = hex;
+      this.setEyedropper(false);
+      this.render();
+      updateEditorPreview();
+    });
+  }
+}
+
+/** @type {ImagePositionWidget|null} */
+let imgWidget = null;
+
+// ============================================================
 // EVENT WIRING
 // ============================================================
 
@@ -932,7 +1088,11 @@ function initEvents() {
 
   // Modal – bg color
   document.getElementById('ed-bg-color').addEventListener('input', e => {
-    if (editingConfig) { editingConfig.bgColor = e.target.value; updateEditorPreview(); }
+    if (editingConfig) {
+      editingConfig.bgColor = e.target.value;
+      updateEditorPreview();
+      if (imgWidget) imgWidget.render();
+    }
   });
 
   // Modal – bg image upload
@@ -941,14 +1101,65 @@ function initEvents() {
     if (!file || !editingConfig) return;
     const reader = new FileReader();
     reader.onload = ev => {
-      editingConfig.bgImage = ev.target.result;
-      updateEditorPreview();
+      const dataUrl = ev.target.result;
+      // Resolve natural dimensions before storing
+      const tmpImg = new Image();
+      tmpImg.onload = () => {
+        editingConfig.bgImage = dataUrl;
+        editingConfig.imgNaturalW = tmpImg.naturalWidth;
+        editingConfig.imgNaturalH = tmpImg.naturalHeight;
+        editingConfig.imgX = 0;
+        editingConfig.imgY = 0;
+        editingConfig.imgScale = 1;
+        document.getElementById('img-zoom').value = '1';
+        document.getElementById('img-zoom-val').textContent = '1.0×';
+        document.getElementById('img-pos-section').classList.remove('hidden');
+        if (!imgWidget) imgWidget = new ImagePositionWidget();
+        imgWidget.load(dataUrl);
+        updateEditorPreview();
+      };
+      tmpImg.src = dataUrl;
     };
     reader.readAsDataURL(file);
   });
+
   document.getElementById('ed-bg-image-clear').addEventListener('click', () => {
-    if (editingConfig) { editingConfig.bgImage = null; updateEditorPreview(); }
+    if (editingConfig) {
+      editingConfig.bgImage = null;
+      editingConfig.imgNaturalW = null;
+      editingConfig.imgNaturalH = null;
+      editingConfig.imgX = 0;
+      editingConfig.imgY = 0;
+      editingConfig.imgScale = 1;
+      updateEditorPreview();
+    }
     document.getElementById('ed-bg-image').value = '';
+    document.getElementById('img-pos-section').classList.add('hidden');
+    if (imgWidget) imgWidget.clear();
+  });
+
+  // Image position widget controls
+  document.getElementById('btn-eyedropper').addEventListener('click', () => {
+    if (imgWidget) imgWidget.setEyedropper(!imgWidget.eyedropperMode);
+  });
+
+  document.getElementById('btn-img-reset').addEventListener('click', () => {
+    if (!editingConfig) return;
+    editingConfig.imgX = 0;
+    editingConfig.imgY = 0;
+    editingConfig.imgScale = 1;
+    document.getElementById('img-zoom').value = '1';
+    document.getElementById('img-zoom-val').textContent = '1.0×';
+    if (imgWidget) imgWidget.render();
+    updateEditorPreview();
+  });
+
+  document.getElementById('img-zoom').addEventListener('input', e => {
+    if (!editingConfig) return;
+    editingConfig.imgScale = parseFloat(e.target.value);
+    document.getElementById('img-zoom-val').textContent = `${editingConfig.imgScale.toFixed(1)}×`;
+    if (imgWidget) imgWidget.render();
+    updateEditorPreview();
   });
 
   // Modal – add text
