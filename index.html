@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ButtonsMaker v0.2.1</title>
+  <title>ButtonsMaker v0.2.3</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -15,7 +15,7 @@
         <div class="header-logo-icon">🔘</div>
         <h1>ButtonsMaker</h1>
       </div>
-      <span class="version-badge">v0.2.1</span>
+      <span class="version-badge">v0.2.3</span>
     </div>
     <div class="header-right">
       <button id="btn-save-project" title="Projekt speichern (LocalStorage + Download)">💾 Speichern</button>
@@ -154,11 +154,17 @@
 
         <!-- Right: preview -->
         <div class="modal-preview">
-          <h3>Vorschau</h3>
-          <div id="preview-container"></div>
+          <h3>Vorschau <span class="preview-hint">· Klick zum Vergrößern</span></h3>
+          <div id="preview-container" title="Klick zum Vergrößern"></div>
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- PREVIEW ZOOM OVERLAY -->
+  <div id="preview-zoom-overlay" class="hidden">
+    <div id="preview-zoom-inner"></div>
+    <p id="preview-zoom-close-hint">Klick oder ESC zum Schließen</p>
   </div>
 
   <!-- TEMPLATE NAME DIALOG -->

@@ -6,7 +6,25 @@ Versionierung nach `X.Y.Z` (siehe README).
 
 ---
 
-## [0.2.1] – 2026-04-30 18:27
+## [0.2.3] – 2026-04-30 19:04
+
+### Geändert
+- Vorschau-Panel im Editor vergrößert: Breite 256 → 340 px, SVG-Größe 210 → 290 px
+- Modal-Breite 820 → 980 px
+
+---
+
+
+
+### Hinzugefügt
+- Vorschau im Button-Editor per Klick vergrößerbar (großes Overlay, Schließen per Klick oder ESC)
+
+### Geändert
+- Dropdown-Felder (Größenauswahl, Schrift, Form-Typ): solider dunkler Hintergrund (#14143a) statt transparentem Glas, damit Text in Browser-nativen Optionslisten sichtbar ist
+
+---
+
+
 
 ### Geändert
 - Hintergrundbild wird jetzt über den gesamten Button (bis zur blauen Außenlinie) dargestellt, nicht mehr auf den Innenkreis beschränkt

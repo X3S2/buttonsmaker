@@ -1,5 +1,5 @@
 /* ============================================================
-   ButtonsMaker – app.js  v0.2.1
+   ButtonsMaker – app.js  v0.2.3
    Pure HTML/CSS/JS – keine Abhängigkeiten
    ============================================================ */
 
@@ -951,13 +951,27 @@ function buildShapeEntry(s, i) {
 function updateEditorPreview() {
   if (!editingConfig) return;
   const { inner, outer } = project.buttonSize;
-  const previewSize = 200;
+  const previewSize = 290;
   const container = document.getElementById('preview-container');
   container.innerHTML = '';
   const svg = renderButtonSVG(editingConfig, outer, inner, previewSize, true);
   container.appendChild(svg);
-  // Keep canvas widget in sync (bgColor changes etc.)
   if (imgWidget && editingConfig.bgImage) imgWidget.render();
+}
+
+function openPreviewZoom() {
+  if (!editingConfig) return;
+  const { inner, outer } = project.buttonSize;
+  const size = Math.min(window.innerWidth, window.innerHeight) * 0.78;
+  const svg = renderButtonSVG(editingConfig, outer, inner, size, true);
+  const inner2 = document.getElementById('preview-zoom-inner');
+  inner2.innerHTML = '';
+  inner2.appendChild(svg);
+  document.getElementById('preview-zoom-overlay').classList.remove('hidden');
+}
+
+function closePreviewZoom() {
+  document.getElementById('preview-zoom-overlay').classList.add('hidden');
 }
 
 // ============================================================
@@ -1531,6 +1545,10 @@ function initEvents() {
     updateEditorPreview();
   });
 
+  // Preview zoom
+  document.getElementById('preview-container').addEventListener('click', openPreviewZoom);
+  document.getElementById('preview-zoom-overlay').addEventListener('click', closePreviewZoom);
+
   // Modal – save/cancel/save-as-template
   document.getElementById('btn-modal-save').addEventListener('click', saveEditor);
   document.getElementById('btn-modal-cancel').addEventListener('click', closeEditor);
@@ -1566,6 +1584,9 @@ function initEvents() {
 
   // Keyboard shortcuts
   document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !document.getElementById('preview-zoom-overlay').classList.contains('hidden')) {
+      closePreviewZoom(); return;
+    }
     if (document.getElementById('modal-overlay').classList.contains('hidden') === false) return;
     if (e.key === 'Escape') { selectedSlotId = null; updateSelectedPanel(); renderPages(); }
     if (e.key === 'Delete' && selectedSlotId) clearSelectedSlot();

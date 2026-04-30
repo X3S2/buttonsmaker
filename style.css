@@ -201,10 +201,13 @@ button.active {
 .sidebar-section input[type="number"],
 .sidebar-section input[type="text"] {
   width: 100%; padding: 7px 10px;
-  background: var(--glass-1); color: var(--text);
+  background: #14143a; color: var(--text);
   border: 1px solid var(--border-2); border-radius: var(--radius-sm);
   font-size: 12px; margin-bottom: 7px; font-family: inherit;
   transition: border-color var(--transition);
+}
+.sidebar-section select option {
+  background: #14143a; color: var(--text);
 }
 .sidebar-section select:focus,
 .sidebar-section input:focus {
@@ -329,7 +332,7 @@ button.active {
   backdrop-filter: blur(32px);
   border: 1px solid var(--border-2);
   border-radius: var(--radius-lg);
-  width: 820px; max-width: 96vw; max-height: 90vh;
+  width: 980px; max-width: 96vw; max-height: 90vh;
   overflow: hidden;
   display: flex; flex-direction: column;
   box-shadow: var(--shadow-xl), 0 0 0 1px rgba(124,58,237,.15);
@@ -366,8 +369,8 @@ button.active {
 }
 
 .modal-preview {
-  width: 256px; flex-shrink: 0;
-  padding: 18px 14px;
+  width: 340px; flex-shrink: 0;
+  padding: 18px 16px;
   display: flex; flex-direction: column; align-items: center; gap: 14px;
   background: rgba(4,4,14,.6);
 }
@@ -379,8 +382,40 @@ button.active {
 #preview-container {
   display: flex; align-items: center; justify-content: center;
   flex: 1; width: 100%;
+  cursor: zoom-in;
+  position: relative;
 }
-#preview-container svg { max-width: 210px; max-height: 210px; }
+#preview-container svg { max-width: 290px; max-height: 290px; }
+#preview-container:hover svg {
+  filter: drop-shadow(0 0 12px rgba(124,58,237,.5));
+  transform: scale(1.04);
+  transition: transform .18s ease, filter .18s ease;
+}
+
+.preview-hint { font-size: 9px; color: var(--text-3); font-weight: 400; }
+
+/* ---- Preview zoom overlay ---- */
+#preview-zoom-overlay {
+  position: fixed; inset: 0;
+  background: rgba(4,4,16,.88);
+  backdrop-filter: blur(10px);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 16px;
+  z-index: 500;
+  cursor: zoom-out;
+}
+#preview-zoom-inner svg {
+  max-width: min(80vmin, 600px);
+  max-height: min(80vmin, 600px);
+  width: min(80vmin, 600px);
+  height: min(80vmin, 600px);
+  filter: drop-shadow(0 8px 40px rgba(0,0,0,.7));
+}
+#preview-zoom-close-hint {
+  font-size: 11px; color: var(--text-3);
+  pointer-events: none;
+}
 
 /* ---- Form controls in modal ---- */
 .ctrl-label {
@@ -437,11 +472,13 @@ button.active {
 .shape-entry-row input[type="number"],
 .text-entry-row select,
 .shape-entry-row select {
-  background: rgba(0,0,0,.25); color: var(--text);
+  background: #14143a; color: var(--text);
   border: 1px solid var(--border-2); border-radius: var(--radius-sm);
   padding: 4px 7px; font-size: 12px; font-family: inherit;
   transition: border-color var(--transition);
 }
+.text-entry-row select option,
+.shape-entry-row select option { background: #14143a; color: var(--text); }
 .text-entry-row input:focus, .shape-entry-row input:focus,
 .text-entry-row select:focus, .shape-entry-row select:focus,
 .text-entry-row textarea:focus {
