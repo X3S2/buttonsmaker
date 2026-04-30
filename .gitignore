@@ -1,0 +1,26 @@
+# Betriebssystem-Metadaten
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Design-Quelldateien (Referenz-Templates, nicht Teil der App)
+Button-Magnete-Druckvorlagen-Button-King/
+*.psd
+*.eps
+
+# IDE
+.vscode/settings.json
+*.suo
+*.user
+.idea/
+
+# Node (falls später benötigt)
+node_modules/
+npm-debug.log*
+
+# Temporäre Dateien
+*.tmp
+*.bak
+
+# Interne Planungsdokumente
+plan.md

@@ -1,0 +1,392 @@
+/* ============================================================
+   ButtonsMaker – style.css
+   ============================================================ */
+
+/* --- CSS Reset & Base --- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --color-bg:        #1a1a2e;
+  --color-surface:   #16213e;
+  --color-panel:     #0f3460;
+  --color-accent:    #e94560;
+  --color-accent2:   #4fc3f7;
+  --color-text:      #e0e0e0;
+  --color-text-muted:#9aa5b4;
+  --color-border:    #2a4066;
+  --color-btn:       #0f3460;
+  --color-btn-hover: #1a4a7a;
+  --color-primary:   #e94560;
+  --color-primary-hover: #c73652;
+  --sidebar-width:   260px;
+  --header-h:        52px;
+  --footer-h:        52px;
+  --radius:          6px;
+  --transition:      0.18s ease;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  color: var(--color-text);
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+/* --- Utility --- */
+.hidden { display: none !important; }
+.hint { color: var(--color-text-muted); font-size: 12px; font-style: italic; }
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.app-header {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--header-h);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+  z-index: 100;
+}
+
+.header-left { display: flex; align-items: center; gap: 10px; }
+.header-left h1 { font-size: 18px; font-weight: 700; color: var(--color-accent); }
+.version-badge {
+  background: var(--color-panel); color: var(--color-text-muted);
+  font-size: 11px; padding: 2px 7px; border-radius: 10px;
+}
+
+.header-right { display: flex; gap: 8px; }
+
+/* ============================================================
+   BUTTONS (UI)
+   ============================================================ */
+button {
+  cursor: pointer; border: 1px solid var(--color-border);
+  background: var(--color-btn); color: var(--color-text);
+  padding: 6px 12px; border-radius: var(--radius);
+  font-size: 13px; transition: background var(--transition);
+  white-space: nowrap;
+}
+button:hover { background: var(--color-btn-hover); }
+
+.btn-primary {
+  background: var(--color-primary); border-color: var(--color-primary);
+  color: #fff; font-weight: 600;
+}
+.btn-primary:hover { background: var(--color-primary-hover); }
+
+.btn-small { padding: 3px 8px; font-size: 12px; }
+
+/* ============================================================
+   MAIN LAYOUT
+   ============================================================ */
+.app-body {
+  position: fixed;
+  top: var(--header-h);
+  bottom: var(--footer-h);
+  left: 0; right: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  overflow-y: auto;
+  padding: 12px 0;
+}
+
+.sidebar-section {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+.sidebar-section h2 {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--color-text-muted);
+  margin-bottom: 10px;
+}
+
+.sidebar-section select,
+.sidebar-section input[type="number"],
+.sidebar-section input[type="text"] {
+  width: 100%; padding: 6px 8px;
+  background: var(--color-bg); color: var(--color-text);
+  border: 1px solid var(--color-border); border-radius: var(--radius);
+  font-size: 13px; margin-bottom: 6px;
+}
+
+#custom-size-row label { display: block; margin-bottom: 6px; font-size: 12px; }
+#custom-size-row input { width: 80px; margin-left: 6px; }
+
+#selected-actions { display: flex; flex-direction: column; gap: 6px; }
+#selected-actions button { width: 100%; text-align: left; }
+
+/* Templates list */
+#templates-list { display: flex; flex-direction: column; gap: 4px; }
+.template-item {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--color-bg); border: 1px solid var(--color-border);
+  border-radius: var(--radius); padding: 5px 8px; font-size: 12px;
+}
+.template-item button { padding: 2px 6px; font-size: 11px; }
+.template-item .tpl-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ============================================================
+   CANVAS AREA
+   ============================================================ */
+.canvas-area {
+  flex: 1;
+  overflow-y: auto;
+  background: #111827;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 24px 0;
+  gap: 24px;
+}
+
+#pages-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  width: 100%;
+}
+
+/* ---- A4 Page ---- */
+.a4-page {
+  /* A4 at 96dpi = 794px × 1123px */
+  width: 794px;
+  height: 1123px;
+  background: #fff;
+  position: relative;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  flex-shrink: 0;
+  /* Scale to fit viewport width if needed – handled via JS transform */
+}
+
+.a4-page .page-label {
+  position: absolute; top: -22px; left: 0;
+  font-size: 11px; color: var(--color-text-muted);
+}
+
+/* Button slots grid */
+.buttons-grid {
+  position: absolute;
+  inset: 0;
+  /* Grid positioning done via inline styles in JS */
+}
+
+/* Individual button slot */
+.btn-slot {
+  position: absolute;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: filter var(--transition);
+}
+.btn-slot:hover { filter: brightness(0.92); }
+.btn-slot.selected .select-ring { opacity: 1; }
+.btn-slot .select-ring { opacity: 0; transition: opacity var(--transition); }
+
+/* ---- Page Navigation ---- */
+.page-nav {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 0 20px;
+  flex-shrink: 0;
+}
+#page-indicator { font-size: 13px; color: var(--color-text-muted); min-width: 80px; text-align: center; }
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.app-footer {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: var(--footer-h);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px;
+  z-index: 100;
+}
+
+/* ============================================================
+   MODAL – BUTTON EDITOR
+   ============================================================ */
+#modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
+}
+
+#modal-editor {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  width: 780px; max-width: 95vw; max-height: 90vh;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-panel);
+}
+.modal-header h2 { font-size: 15px; font-weight: 600; }
+.modal-close { background: transparent; border: none; font-size: 16px; padding: 2px 8px; }
+
+.modal-body {
+  display: flex; flex: 1; overflow: hidden;
+}
+
+.modal-controls {
+  flex: 1; overflow-y: auto; padding: 16px;
+  display: flex; flex-direction: column; gap: 14px;
+  border-right: 1px solid var(--color-border);
+}
+
+.modal-preview {
+  width: 260px; padding: 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  background: #111827;
+}
+.modal-preview h3 { font-size: 12px; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+#preview-container {
+  display: flex; align-items: center; justify-content: center;
+  flex: 1; width: 100%;
+}
+#preview-container svg { max-width: 220px; max-height: 220px; }
+
+/* Controls inside modal */
+.ctrl-label {
+  display: flex; flex-direction: column; gap: 5px;
+  font-size: 12px; color: var(--color-text-muted);
+}
+.ctrl-label input[type="color"] {
+  width: 48px; height: 28px; padding: 0; border: none; cursor: pointer;
+}
+.ctrl-label input[type="file"] { font-size: 12px; color: var(--color-text); }
+
+/* Texts section */
+.texts-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 12px; font-weight: 600; color: var(--color-text-muted);
+}
+
+.text-entry {
+  background: var(--color-bg); border: 1px solid var(--color-border);
+  border-radius: var(--radius); padding: 10px; margin-bottom: 8px;
+  display: flex; flex-direction: column; gap: 7px;
+}
+.text-entry-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.text-entry-row label { font-size: 11px; color: var(--color-text-muted); display: flex; flex-direction: column; gap: 3px; }
+.text-entry-row input[type="text"],
+.text-entry-row textarea {
+  background: var(--color-surface); color: var(--color-text);
+  border: 1px solid var(--color-border); border-radius: 4px;
+  padding: 4px 6px; font-size: 13px; width: 100%;
+}
+.text-entry-row textarea { resize: vertical; min-height: 52px; }
+.text-entry-row input[type="number"] {
+  width: 56px; background: var(--color-surface); color: var(--color-text);
+  border: 1px solid var(--color-border); border-radius: 4px; padding: 4px 6px; font-size: 13px;
+}
+.text-entry-row input[type="color"] { width: 36px; height: 26px; border: none; cursor: pointer; }
+.text-entry-row select {
+  background: var(--color-surface); color: var(--color-text);
+  border: 1px solid var(--color-border); border-radius: 4px; padding: 4px 6px; font-size: 12px;
+}
+.text-entry-row input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; }
+.text-remove { align-self: flex-end; margin-left: auto; }
+
+/* Modal action buttons */
+.modal-actions {
+  display: flex; gap: 8px; justify-content: flex-end;
+  padding-top: 6px; border-top: 1px solid var(--color-border); margin-top: auto;
+}
+
+/* ============================================================
+   TEMPLATE NAME DIALOG
+   ============================================================ */
+#template-name-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 300;
+}
+#template-name-dialog {
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: 10px; padding: 20px; min-width: 300px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+#template-name-dialog h3 { font-size: 14px; }
+#template-name-input {
+  background: var(--color-bg); color: var(--color-text);
+  border: 1px solid var(--color-border); border-radius: var(--radius);
+  padding: 8px 10px; font-size: 14px; width: 100%;
+}
+.template-dialog-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ============================================================
+   PRINT STYLES
+   ============================================================ */
+@media print {
+  /* Hide everything that is not the pages */
+  .no-print,
+  .app-header,
+  .app-footer,
+  .sidebar,
+  .page-nav,
+  .page-label,
+  .select-ring,
+  #modal-overlay,
+  #template-name-overlay {
+    display: none !important;
+  }
+
+  html, body {
+    width: 210mm;
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+
+  .app-body {
+    position: static;
+    overflow: visible;
+  }
+
+  .canvas-area {
+    padding: 0;
+    background: #fff;
+    overflow: visible;
+  }
+
+  #pages-container {
+    gap: 0;
+  }
+
+  .a4-page {
+    width: 210mm;
+    height: 297mm;
+    box-shadow: none;
+    page-break-after: always;
+    break-after: page;
+    transform: none !important;
+  }
+
+  /* Ensure SVG button colours print correctly */
+  svg { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

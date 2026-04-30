@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ButtonsMaker v0.1.0</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="app-header no-print">
+    <div class="header-left">
+      <h1>ButtonsMaker</h1>
+      <span class="version-badge">v0.1.0</span>
+    </div>
+    <div class="header-right">
+      <button id="btn-save-project" title="Projekt speichern (LocalStorage + Download)">💾 Speichern</button>
+      <button id="btn-load-project" title="Projekt laden (JSON-Datei)">📂 Laden</button>
+      <input type="file" id="file-load-input" accept=".json" style="display:none" />
+    </div>
+  </header>
+
+  <!-- ===== MAIN LAYOUT ===== -->
+  <div class="app-body">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar no-print">
+
+      <section class="sidebar-section">
+        <h2>Button-Größe</h2>
+        <select id="size-preset">
+          <option value="25|39">25 mm (Innen 25 / Außen 39)</option>
+          <option value="31|45">31 mm (Innen 31 / Außen 45)</option>
+          <option value="37|51" selected>37 mm (Innen 37 / Außen 51)</option>
+          <option value="50|64">50 mm (Innen 50 / Außen 64)</option>
+          <option value="56|70">56 mm (Innen 56 / Außen 70)</option>
+          <option value="75|89">75 mm (Innen 75 / Außen 89)</option>
+          <option value="custom|custom">Benutzerdefiniert …</option>
+        </select>
+        <div id="custom-size-row" class="hidden">
+          <label>Innen (mm): <input type="number" id="custom-inner" min="10" max="150" value="37" /></label>
+          <label>Außen (mm): <input type="number" id="custom-outer" min="15" max="160" value="51" /></label>
+          <button id="btn-apply-custom">Anwenden</button>
+        </div>
+      </section>
+
+      <section class="sidebar-section" id="selected-panel">
+        <h2>Ausgewählter Button</h2>
+        <p id="selected-hint" class="hint">Klicke einen Button auf der Seite an.</p>
+        <div id="selected-actions" class="hidden">
+          <button id="btn-edit-selected">✏️ Bearbeiten</button>
+          <button id="btn-copy-selected">📋 Kopieren</button>
+          <button id="btn-clear-selected">🗑️ Leeren</button>
+        </div>
+      </section>
+
+      <section class="sidebar-section">
+        <h2>Vorlagen</h2>
+        <div id="templates-list">
+          <p class="hint">Noch keine Vorlagen gespeichert.</p>
+        </div>
+      </section>
+
+    </aside>
+
+    <!-- A4 CANVAS AREA -->
+    <main class="canvas-area">
+      <div id="pages-container"></div>
+
+      <!-- Page navigation -->
+      <div class="page-nav no-print">
+        <button id="btn-prev-page">◀</button>
+        <span id="page-indicator">Seite 1 / 1</span>
+        <button id="btn-next-page">▶</button>
+        <button id="btn-add-page">+ Seite</button>
+        <button id="btn-remove-page">− Seite</button>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- FOOTER TOOLBAR -->
+  <footer class="app-footer no-print">
+    <button id="btn-print">🖨️ Drucken</button>
+  </footer>
+
+  <!-- ===== BUTTON EDITOR MODAL ===== -->
+  <div id="modal-overlay" class="hidden">
+    <div id="modal-editor">
+      <div class="modal-header">
+        <h2>Button bearbeiten</h2>
+        <button class="modal-close" id="btn-modal-close">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Left: controls -->
+        <div class="modal-controls">
+
+          <label class="ctrl-label">Hintergrundfarbe
+            <input type="color" id="ed-bg-color" value="#ffffff" />
+          </label>
+
+          <label class="ctrl-label">Hintergrundbild
+            <input type="file" id="ed-bg-image" accept="image/*" />
+            <button id="ed-bg-image-clear" class="btn-small">Bild entfernen</button>
+          </label>
+
+          <div class="texts-section">
+            <div class="texts-header">
+              <span>Text-Ebenen</span>
+              <button id="btn-add-text" class="btn-small">+ Text</button>
+            </div>
+            <div id="texts-list"></div>
+          </div>
+
+          <div class="modal-actions">
+            <button id="btn-save-as-template">📌 Als Vorlage</button>
+            <button id="btn-modal-cancel">Abbrechen</button>
+            <button id="btn-modal-save" class="btn-primary">Speichern</button>
+          </div>
+
+        </div>
+
+        <!-- Right: preview -->
+        <div class="modal-preview">
+          <h3>Vorschau</h3>
+          <div id="preview-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEMPLATE NAME DIALOG -->
+  <div id="template-name-overlay" class="hidden">
+    <div id="template-name-dialog">
+      <h3>Vorlage benennen</h3>
+      <input type="text" id="template-name-input" placeholder="z.B. Sommer-Button" maxlength="40" />
+      <div class="template-dialog-actions">
+        <button id="btn-template-name-cancel">Abbrechen</button>
+        <button id="btn-template-name-save" class="btn-primary">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
