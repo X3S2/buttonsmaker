@@ -1,5 +1,5 @@
 /* ============================================================
-   ButtonsMaker – app.js  v0.1.2
+   ButtonsMaker – app.js  v0.2.0
    Pure HTML/CSS/JS – keine Abhängigkeiten
    ============================================================ */
 
@@ -64,8 +64,41 @@ function makeEmptyButtonConfig() {
     imgX: 0,
     imgY: 0,
     imgScale: 1,
+    shapes: [],
     texts: [],
   };
+}
+
+/** @returns {Shape} */
+function makeShape() {
+  return {
+    id: makeId(),
+    type: 'circle',   // circle | ellipse | rect | roundrect | triangle | star | line
+    x: 50, y: 50,     // % of inner diameter (center point)
+    w: 40, h: 40,     // % of inner diameter
+    rotation: 0,
+    fillColor: '#e94560',
+    fillOpacity: 1,
+    strokeColor: '#ffffff',
+    strokeWidth: 0,
+  };
+}
+
+/**
+ * Build SVG polygon points for a star shape.
+ * @param {number} cx @param {number} cy @param {number} r outer radius
+ * @param {number} numPoints
+ * @returns {string}
+ */
+function starPoints(cx, cy, r, numPoints) {
+  const innerR = r * 0.42;
+  const pts = [];
+  for (let i = 0; i < numPoints * 2; i++) {
+    const radius = i % 2 === 0 ? r : innerR;
+    const angle = (i * Math.PI / numPoints) - Math.PI / 2;
+    pts.push(`${cx + radius * Math.cos(angle)},${cy + radius * Math.sin(angle)}`);
+  }
+  return pts.join(' ');
 }
 
 /** @returns {TextLayer} */
@@ -202,6 +235,17 @@ function renderButtonSVG(config, outerMm, innerMm, sizePx, isPreview) {
     svg.appendChild(imgEl);
   }
 
+  // ---- Shape layers (clipped to inner circle) ----
+  if (config.shapes && config.shapes.length > 0) {
+    const shapeGroup = document.createElementNS(SVG_NS, 'g');
+    shapeGroup.setAttribute('clip-path', `url(#${clipId})`);
+    config.shapes.forEach(s => {
+      const el = buildShapeSVGEl(s, innerR, cx, cy);
+      if (el) shapeGroup.appendChild(el);
+    });
+    svg.appendChild(shapeGroup);
+  }
+
   // ---- Text layers (clipped to inner circle) ----
   if (config.texts && config.texts.length > 0) {
     const textGroup = document.createElementNS(SVG_NS, 'g');
@@ -267,9 +311,140 @@ function renderButtonSVG(config, outerMm, innerMm, sizePx, isPreview) {
   return svg;
 }
 
-// ============================================================
-// PAGE RENDERING
-// ============================================================
+/**
+ * Build a single SVG element for a shape.
+ * All coordinates/sizes are in mm (same units as the SVG viewBox).
+ * @param {Shape} s @param {number} innerR @param {number} cx @param {number} cy
+ * @returns {SVGElement|null}
+ */
+function buildShapeSVGEl(s, innerR, cx, cy) {
+  const px = (cx - innerR) + (s.x / 100) * (innerR * 2);
+  const py = (cy - innerR) + (s.y / 100) * (innerR * 2);
+  const w  = (s.w / 100) * (innerR * 2);
+  const h  = (s.h / 100) * (innerR * 2);
+  const fill  = s.type === 'line' ? 'none' : (s.fillColor || '#e94560');
+  const fOpac = s.fillOpacity != null ? s.fillOpacity : 1;
+  const stroke = s.strokeColor || 'none';
+  const sw     = s.strokeWidth || 0;
+
+  let el = null;
+  switch (s.type) {
+    case 'circle':
+      el = document.createElementNS(SVG_NS, 'circle');
+      el.setAttribute('cx', String(px)); el.setAttribute('cy', String(py));
+      el.setAttribute('r', String(Math.min(w, h) / 2));
+      break;
+    case 'ellipse':
+      el = document.createElementNS(SVG_NS, 'ellipse');
+      el.setAttribute('cx', String(px)); el.setAttribute('cy', String(py));
+      el.setAttribute('rx', String(w / 2)); el.setAttribute('ry', String(h / 2));
+      break;
+    case 'rect':
+      el = document.createElementNS(SVG_NS, 'rect');
+      el.setAttribute('x', String(px - w / 2)); el.setAttribute('y', String(py - h / 2));
+      el.setAttribute('width', String(w)); el.setAttribute('height', String(h));
+      break;
+    case 'roundrect':
+      el = document.createElementNS(SVG_NS, 'rect');
+      el.setAttribute('x', String(px - w / 2)); el.setAttribute('y', String(py - h / 2));
+      el.setAttribute('width', String(w)); el.setAttribute('height', String(h));
+      el.setAttribute('rx', String(Math.min(w, h) * 0.18));
+      break;
+    case 'triangle': {
+      const pts = `${px},${py - h/2} ${px - w/2},${py + h/2} ${px + w/2},${py + h/2}`;
+      el = document.createElementNS(SVG_NS, 'polygon');
+      el.setAttribute('points', pts);
+      break;
+    }
+    case 'star':
+      el = document.createElementNS(SVG_NS, 'polygon');
+      el.setAttribute('points', starPoints(px, py, Math.min(w, h) / 2, 5));
+      break;
+    case 'line':
+      el = document.createElementNS(SVG_NS, 'line');
+      el.setAttribute('x1', String(px - w / 2)); el.setAttribute('y1', String(py));
+      el.setAttribute('x2', String(px + w / 2)); el.setAttribute('y2', String(py));
+      break;
+    default:
+      return null;
+  }
+
+  el.setAttribute('fill', fill);
+  el.setAttribute('fill-opacity', String(fOpac));
+  el.setAttribute('stroke', sw > 0 ? stroke : 'none');
+  el.setAttribute('stroke-width', String(sw));
+  if (s.rotation) el.setAttribute('transform', `rotate(${s.rotation},${px},${py})`);
+  return el;
+}
+
+/**
+ * Draw a shape onto a 2D canvas context.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Shape} s @param {number} innerRpx @param {number} cx @param {number} cy
+ */
+function drawShapeCanvas(ctx, s, innerRpx, cx, cy) {
+  const px = (cx - innerRpx) + (s.x / 100) * (innerRpx * 2);
+  const py = (cy - innerRpx) + (s.y / 100) * (innerRpx * 2);
+  const w  = (s.w / 100) * (innerRpx * 2);
+  const h  = (s.h / 100) * (innerRpx * 2);
+
+  ctx.save();
+  ctx.globalAlpha = s.fillOpacity != null ? s.fillOpacity : 1;
+  ctx.fillStyle   = s.fillColor || '#e94560';
+  ctx.strokeStyle = s.strokeColor || '#ffffff';
+  ctx.lineWidth   = s.strokeWidth || 0;
+
+  if (s.rotation) {
+    ctx.translate(px, py);
+    ctx.rotate(s.rotation * Math.PI / 180);
+    ctx.translate(-px, -py);
+  }
+
+  ctx.beginPath();
+  switch (s.type) {
+    case 'circle':
+      ctx.arc(px, py, Math.min(w, h) / 2, 0, Math.PI * 2);
+      break;
+    case 'ellipse':
+      ctx.ellipse(px, py, w / 2, h / 2, 0, 0, Math.PI * 2);
+      break;
+    case 'rect':
+      ctx.rect(px - w/2, py - h/2, w, h);
+      break;
+    case 'roundrect': {
+      const r = Math.min(w, h) * 0.18;
+      if (ctx.roundRect) ctx.roundRect(px - w/2, py - h/2, w, h, r);
+      else ctx.rect(px - w/2, py - h/2, w, h);
+      break;
+    }
+    case 'triangle':
+      ctx.moveTo(px, py - h/2);
+      ctx.lineTo(px - w/2, py + h/2);
+      ctx.lineTo(px + w/2, py + h/2);
+      ctx.closePath();
+      break;
+    case 'star': {
+      const or = Math.min(w, h) / 2;
+      const ir = or * 0.42;
+      for (let i = 0; i < 10; i++) {
+        const rad = i % 2 === 0 ? or : ir;
+        const a   = (i * Math.PI / 5) - Math.PI / 2;
+        if (i === 0) ctx.moveTo(px + rad * Math.cos(a), py + rad * Math.sin(a));
+        else         ctx.lineTo(px + rad * Math.cos(a), py + rad * Math.sin(a));
+      }
+      ctx.closePath();
+      break;
+    }
+    case 'line':
+      ctx.moveTo(px - w/2, py);
+      ctx.lineTo(px + w/2, py);
+      break;
+  }
+
+  if (s.type !== 'line') ctx.fill();
+  if ((s.strokeWidth || 0) > 0) ctx.stroke();
+  ctx.restore();
+}
 
 /**
  * Render one Page DOM element.
@@ -458,7 +633,8 @@ function openEditor(pageId, slotIndex) {
     imgWidget.clear();
   }
 
-  // Render text layers
+  // Render text layers + shapes
+  renderShapesList();
   renderTextsList();
 
   // Update preview
@@ -614,6 +790,149 @@ function buildTextEntry(t, i) {
     updateEditorPreview();
   });
   row3.appendChild(removeBtn);
+  entry.appendChild(row3);
+
+  return entry;
+}
+
+/** Rebuild the shapes list UI inside the editor. */
+function renderShapesList() {
+  const container = document.getElementById('shapes-list');
+  container.innerHTML = '';
+  (editingConfig.shapes || []).forEach((s, i) => {
+    container.appendChild(buildShapeEntry(s, i));
+  });
+}
+
+/**
+ * Build one shape-layer UI row.
+ * @param {Shape} s @param {number} i
+ * @returns {HTMLElement}
+ */
+function buildShapeEntry(s, i) {
+  const entry = document.createElement('div');
+  entry.className = 'shape-entry';
+
+  // Row 1: type + fill color + eyedropper + remove
+  const row1 = document.createElement('div');
+  row1.className = 'shape-entry-row';
+
+  const typeLbl = document.createElement('label');
+  typeLbl.textContent = 'Form';
+  const typeSel = document.createElement('select');
+  [
+    ['circle',    'Kreis'],
+    ['ellipse',   'Ellipse'],
+    ['rect',      'Rechteck'],
+    ['roundrect', 'Abger. Rechteck'],
+    ['triangle',  'Dreieck'],
+    ['star',      'Stern'],
+    ['line',      'Linie'],
+  ].forEach(([val, label]) => {
+    const opt = document.createElement('option');
+    opt.value = val; opt.textContent = label;
+    if (s.type === val) opt.selected = true;
+    typeSel.appendChild(opt);
+  });
+  typeSel.addEventListener('change', () => { s.type = typeSel.value; renderShapesList(); updateEditorPreview(); });
+  typeLbl.appendChild(typeSel);
+  row1.appendChild(typeLbl);
+
+  // Fill color
+  const fillLbl = document.createElement('label');
+  fillLbl.textContent = 'Füllfarbe';
+  const fillInput = document.createElement('input');
+  fillInput.type = 'color'; fillInput.value = s.fillColor || '#e94560';
+  fillInput.addEventListener('input', () => { s.fillColor = fillInput.value; if (imgWidget) imgWidget.render(); updateEditorPreview(); });
+  fillLbl.appendChild(fillInput);
+  row1.appendChild(fillLbl);
+
+  // Eyedropper for fill
+  const eyeBtn = document.createElement('button');
+  eyeBtn.className = 'btn-small';
+  eyeBtn.textContent = '🔬';
+  eyeBtn.title = 'Farbe aus Bild aufnehmen';
+  eyeBtn.addEventListener('click', () => {
+    if (!imgWidget) return;
+    imgWidget.setEyedropper(true, (hex) => {
+      s.fillColor = hex;
+      fillInput.value = hex;
+      if (imgWidget) imgWidget.render();
+      updateEditorPreview();
+    });
+  });
+  row1.appendChild(eyeBtn);
+
+  // Remove
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'btn-small shape-remove';
+  removeBtn.textContent = '✕';
+  removeBtn.addEventListener('click', () => {
+    editingConfig.shapes.splice(i, 1);
+    renderShapesList();
+    updateEditorPreview();
+  });
+  row1.appendChild(removeBtn);
+  entry.appendChild(row1);
+
+  // Row 2: fill opacity + stroke color + stroke width
+  const row2 = document.createElement('div');
+  row2.className = 'shape-entry-row';
+
+  const opacLbl = document.createElement('label');
+  opacLbl.style.flex = '1';
+  opacLbl.textContent = `Deckkraft (${Math.round((s.fillOpacity || 1) * 100)}%)`;
+  const opacSlider = document.createElement('input');
+  opacSlider.type = 'range'; opacSlider.min = '0'; opacSlider.max = '1'; opacSlider.step = '0.05';
+  opacSlider.value = String(s.fillOpacity != null ? s.fillOpacity : 1);
+  opacSlider.style.cssText = 'width:100%;accent-color:var(--accent)';
+  opacSlider.addEventListener('input', () => {
+    s.fillOpacity = parseFloat(opacSlider.value);
+    opacLbl.textContent = `Deckkraft (${Math.round(s.fillOpacity * 100)}%)`;
+    if (imgWidget) imgWidget.render(); updateEditorPreview();
+  });
+  opacLbl.appendChild(opacSlider);
+  row2.appendChild(opacLbl);
+
+  if (s.type !== 'line') {
+    const strLbl = document.createElement('label');
+    strLbl.textContent = 'Kontur';
+    const strInput = document.createElement('input');
+    strInput.type = 'color'; strInput.value = s.strokeColor || '#ffffff';
+    strInput.addEventListener('input', () => { s.strokeColor = strInput.value; if (imgWidget) imgWidget.render(); updateEditorPreview(); });
+    strLbl.appendChild(strInput);
+    row2.appendChild(strLbl);
+
+    const swLbl = document.createElement('label');
+    swLbl.textContent = 'Breite (mm)';
+    const swInput = document.createElement('input');
+    swInput.type = 'number'; swInput.min = '0'; swInput.max = '5'; swInput.step = '0.1'; swInput.value = s.strokeWidth || 0;
+    swInput.addEventListener('change', () => { s.strokeWidth = parseFloat(swInput.value) || 0; if (imgWidget) imgWidget.render(); updateEditorPreview(); });
+    swLbl.appendChild(swInput);
+    row2.appendChild(swLbl);
+  }
+  entry.appendChild(row2);
+
+  // Row 3: position X/Y + size W/H + rotation
+  const row3 = document.createElement('div');
+  row3.className = 'shape-entry-row';
+
+  [
+    ['X %', 'x', 0, 100], ['Y %', 'y', 0, 100],
+    ['B %', 'w', 1, 200], ['H %', 'h', 1, 200],
+    ['Rot °', 'rotation', -180, 180],
+  ].forEach(([label, key, min, max]) => {
+    const lbl = document.createElement('label');
+    lbl.textContent = label;
+    const inp = document.createElement('input');
+    inp.type = 'number'; inp.min = String(min); inp.max = String(max); inp.value = s[key];
+    inp.addEventListener('change', () => {
+      s[key] = parseFloat(inp.value) || 0;
+      if (imgWidget) imgWidget.render(); updateEditorPreview();
+    });
+    lbl.appendChild(inp);
+    row3.appendChild(lbl);
+  });
   entry.appendChild(row3);
 
   return entry;
@@ -897,11 +1216,12 @@ class ImagePositionWidget {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
-  setEyedropper(on) {
+  setEyedropper(on, callback) {
     this.eyedropperMode = on;
+    this.eyedropperCallback = callback || null;
     this.canvas.classList.toggle('eyedropper-mode', on);
     document.getElementById('eyedropper-hint').classList.toggle('hidden', !on);
-    document.getElementById('btn-eyedropper').classList.toggle('active', on);
+    document.getElementById('btn-eyedropper').classList.toggle('active', on && !callback);
   }
 
   render() {
@@ -942,6 +1262,16 @@ class ImagePositionWidget {
       ctx.arc(cx, cy, innerRpx, 0, Math.PI * 2);
       ctx.clip();
       ctx.drawImage(this.imgEl, ix, iy, scaledW, scaledH);
+      ctx.restore();
+    }
+
+    // Shapes (clipped to inner circle)
+    if (editingConfig.shapes && editingConfig.shapes.length > 0) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, innerRpx, 0, Math.PI * 2);
+      ctx.clip();
+      editingConfig.shapes.forEach(s => drawShapeCanvas(ctx, s, innerRpx, cx, cy));
       ctx.restore();
     }
 
@@ -998,11 +1328,16 @@ class ImagePositionWidget {
       const pixel = this.ctx.getImageData(e.offsetX, e.offsetY, 1, 1).data;
       const hex = '#' + [pixel[0], pixel[1], pixel[2]]
         .map(v => v.toString(16).padStart(2, '0')).join('');
-      if (editingConfig) editingConfig.bgColor = hex;
-      document.getElementById('ed-bg-color').value = hex;
+      if (this.eyedropperCallback) {
+        this.eyedropperCallback(hex);
+      } else {
+        // Default: set bgColor
+        if (editingConfig) editingConfig.bgColor = hex;
+        document.getElementById('ed-bg-color').value = hex;
+        updateEditorPreview();
+      }
       this.setEyedropper(false);
       this.render();
-      updateEditorPreview();
     });
   }
 }
@@ -1140,7 +1475,14 @@ function initEvents() {
 
   // Image position widget controls
   document.getElementById('btn-eyedropper').addEventListener('click', () => {
-    if (imgWidget) imgWidget.setEyedropper(!imgWidget.eyedropperMode);
+    if (!imgWidget) return;
+    const isOn = !imgWidget.eyedropperMode;
+    imgWidget.setEyedropper(isOn, isOn ? (hex) => {
+      if (editingConfig) editingConfig.bgColor = hex;
+      document.getElementById('ed-bg-color').value = hex;
+      if (imgWidget) imgWidget.render();
+      updateEditorPreview();
+    } : null);
   });
 
   document.getElementById('btn-img-reset').addEventListener('click', () => {
@@ -1159,6 +1501,15 @@ function initEvents() {
     editingConfig.imgScale = parseFloat(e.target.value);
     document.getElementById('img-zoom-val').textContent = `${editingConfig.imgScale.toFixed(1)}×`;
     if (imgWidget) imgWidget.render();
+    updateEditorPreview();
+  });
+
+  // Modal – add shape
+  document.getElementById('btn-add-shape').addEventListener('click', () => {
+    if (!editingConfig) return;
+    if (!editingConfig.shapes) editingConfig.shapes = [];
+    editingConfig.shapes.push(makeShape());
+    renderShapesList();
     updateEditorPreview();
   });
 

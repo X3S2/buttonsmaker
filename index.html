@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ButtonsMaker v0.1.2</title>
+  <title>ButtonsMaker v0.2.0</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -11,8 +11,11 @@
   <!-- ===== HEADER ===== -->
   <header class="app-header no-print">
     <div class="header-left">
-      <h1>ButtonsMaker</h1>
-      <span class="version-badge">v0.1.2</span>
+      <div class="header-logo">
+        <div class="header-logo-icon">🔘</div>
+        <h1>ButtonsMaker</h1>
+      </div>
+      <span class="version-badge">v0.2.0</span>
     </div>
     <div class="header-right">
       <button id="btn-save-project" title="Projekt speichern (LocalStorage + Download)">💾 Speichern</button>
@@ -122,6 +125,15 @@
               <input type="range" id="img-zoom" min="0.5" max="3" step="0.05" value="1" />
               <span id="img-zoom-val">1.0×</span>
             </label>
+          </div>
+
+          <!-- Shapes section -->
+          <div class="shapes-section">
+            <div class="shapes-header">
+              <span>Formen</span>
+              <button id="btn-add-shape" class="btn-small">+ Form</button>
+            </div>
+            <div id="shapes-list"></div>
           </div>
 
           <div class="texts-section">

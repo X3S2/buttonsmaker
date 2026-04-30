@@ -6,7 +6,26 @@ Versionierung nach `X.Y.Z` (siehe README).
 
 ---
 
-## [0.1.2] – 2026-04-30 17:14
+## [0.2.0] – 2026-04-30 17:51
+
+### Hinzugefügt
+- **Formen-Editor**: Beliebig viele Formebenen pro Button – Typen: Kreis, Ellipse, Rechteck, Abgerundetes Rechteck, Dreieck, Stern, Linie
+- Jede Form konfigurierbar: Füllfarbe, Deckkraft (Schieberegler), Konturfarbe, Konturbreite, Position X/Y (%), Größe B/H (%), Rotation (°)
+- **Pipette für Formen**: Jede Form hat ihren eigenen Eyedropper-Button (🔬) – Farbe direkt aus dem Canvas-Widget aufnehmen
+- Formen-Rendering in SVG (Druckausgabe) und Canvas (Editor-Preview) vollständig implementiert
+- Callback-basierter Eyedropper: Pipette leitet Farbe gezielt an bgColor oder Shape-Füllfarbe weiter
+
+### Geändert
+- **Komplettes UI-Redesign**: „Midnight Studio" Glassmorphism-Design
+  - Ultra-dunkler Hintergrund (#08081a) mit gepunktetem Rastermuster
+  - Glassmorphism-Panels mit `backdrop-filter: blur()`
+  - Gradient-Akzente (Violet → Blau → Cyan) für Logo, Überschriften, Buttons
+  - Custom Scrollbar, Hover-Animationen, Glow-Effekte
+  - Abgerundete Elemente, Pill-Buttons, verbesserte Typografie-Hierarchie
+
+---
+
+
 
 ### Hinzugefügt
 - **Bild verschieben**: Im Button-Editor können Hintergrundbilder per Drag&Drop innerhalb des Buttons repositioniert werden (interaktives Canvas-Widget)
