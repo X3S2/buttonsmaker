@@ -6,7 +6,16 @@ Versionierung nach `X.Y.Z` (siehe README).
 
 ---
 
-## [0.2.0] – 2026-04-30 17:51
+## [0.2.1] – 2026-04-30 18:27
+
+### Geändert
+- Hintergrundbild wird jetzt über den gesamten Button (bis zur blauen Außenlinie) dargestellt, nicht mehr auf den Innenkreis beschränkt
+- Roter Innenkreis bleibt reine Entwurfs-Schablone (kein Clip für das Bild)
+- Cover-Skalierung und Canvas-Widget angepasst (Referenzgröße: Außendurchmesser statt Innendurchmesser)
+
+---
+
+
 
 ### Hinzugefügt
 - **Formen-Editor**: Beliebig viele Formebenen pro Button – Typen: Kreis, Ellipse, Rechteck, Abgerundetes Rechteck, Dreieck, Stern, Linie

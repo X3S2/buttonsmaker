@@ -1,5 +1,5 @@
 /* ============================================================
-   ButtonsMaker – app.js  v0.2.0
+   ButtonsMaker – app.js  v0.2.1
    Pure HTML/CSS/JS – keine Abhängigkeiten
    ============================================================ */
 
@@ -185,17 +185,27 @@ function renderButtonSVG(config, outerMm, innerMm, sizePx, isPreview) {
   svg.setAttribute('width', String(sizePx));
   svg.setAttribute('height', String(sizePx));
 
-  // ---- defs: clip to inner circle ----
+  // ---- defs: inner clip (text/shapes) + outer clip (image) ----
   const defs = document.createElementNS(SVG_NS, 'defs');
+
   const clipId = 'clip-' + config.id + (isPreview ? '-prev' : '');
   const clipPath = document.createElementNS(SVG_NS, 'clipPath');
   clipPath.setAttribute('id', clipId);
   const clipCircle = document.createElementNS(SVG_NS, 'circle');
-  clipCircle.setAttribute('cx', String(cx));
-  clipCircle.setAttribute('cy', String(cy));
+  clipCircle.setAttribute('cx', String(cx)); clipCircle.setAttribute('cy', String(cy));
   clipCircle.setAttribute('r', String(innerR));
   clipPath.appendChild(clipCircle);
   defs.appendChild(clipPath);
+
+  // Outer clip for the image — fills entire button including fold-over area
+  const outerClipId = 'clipO-' + config.id + (isPreview ? '-prev' : '');
+  const outerClipPath = document.createElementNS(SVG_NS, 'clipPath');
+  outerClipPath.setAttribute('id', outerClipId);
+  const outerClipCircle = document.createElementNS(SVG_NS, 'circle');
+  outerClipCircle.setAttribute('cx', String(cx)); outerClipCircle.setAttribute('cy', String(cy));
+  outerClipCircle.setAttribute('r', String(outerR));
+  outerClipPath.appendChild(outerClipCircle);
+  defs.appendChild(outerClipPath);
 
   // ---- background fill (outer circle) + optional image ----
   svg.appendChild(defs);
@@ -210,13 +220,13 @@ function renderButtonSVG(config, outerMm, innerMm, sizePx, isPreview) {
   if (config.bgImage) {
     const imgEl = document.createElementNS(SVG_NS, 'image');
     imgEl.setAttribute('href', config.bgImage);
-    imgEl.setAttribute('clip-path', `url(#${clipId})`);
+    imgEl.setAttribute('clip-path', `url(#${outerClipId})`);
 
     const { imgNaturalW, imgNaturalH, imgX = 0, imgY = 0, imgScale = 1 } = config;
     if (imgNaturalW && imgNaturalH) {
-      // Cover positioning with user-defined offset and zoom
-      const innerD = innerR * 2;
-      const coverScale = Math.max(innerD / imgNaturalW, innerD / imgNaturalH) * imgScale;
+      // Cover the full outer circle, user offset applied from center
+      const outerD = outerR * 2;
+      const coverScale = Math.max(outerD / imgNaturalW, outerD / imgNaturalH) * imgScale;
       const scaledW = imgNaturalW * coverScale;
       const scaledH = imgNaturalH * coverScale;
       imgEl.setAttribute('x', String(cx - scaledW / 2 + imgX));
@@ -1245,13 +1255,13 @@ class ImagePositionWidget {
     ctx.fill();
     ctx.restore();
 
-    // Image clipped to inner circle
+    // Image clipped to outer circle (full button area incl. fold-over)
     if (this.imgLoaded) {
       const { imgX = 0, imgY = 0, imgScale = 1 } = editingConfig;
-      const innerD = innerRpx * 2;
+      const outerD = outerRpx * 2;
       const natW = this.imgEl.naturalWidth;
       const natH = this.imgEl.naturalHeight;
-      const coverScale = Math.max(innerD / natW, innerD / natH) * imgScale;
+      const coverScale = Math.max(outerD / natW, outerD / natH) * imgScale;
       const scaledW = natW * coverScale;
       const scaledH = natH * coverScale;
       const ix = cx - scaledW / 2 + imgX * pxPerMm;
@@ -1259,7 +1269,7 @@ class ImagePositionWidget {
 
       ctx.save();
       ctx.beginPath();
-      ctx.arc(cx, cy, innerRpx, 0, Math.PI * 2);
+      ctx.arc(cx, cy, outerRpx, 0, Math.PI * 2);
       ctx.clip();
       ctx.drawImage(this.imgEl, ix, iy, scaledW, scaledH);
       ctx.restore();
