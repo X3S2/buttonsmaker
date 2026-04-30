@@ -1,5 +1,5 @@
 /* ============================================================
-   ButtonsMaker – app.js  v0.2.5
+   ButtonsMaker – app.js  v0.3.0
    Pure HTML/CSS/JS – keine Abhängigkeiten
    ============================================================ */
 
@@ -115,6 +115,16 @@ function makeTextLayer() {
     align: 'center',
     bold: false,
     italic: false,
+    rotation: 0,
+    shadowEnabled: false,
+    shadowColor: '#000000',
+    shadowBlur: 3,
+    shadowOffsetX: 2,
+    shadowOffsetY: 2,
+    strokeEnabled: false,
+    strokeColor: '#000000',
+    strokeWidth: 1,
+    arcRadius: 0,   // mm: 0=gerade, +N=Bogen oben, -N=Bogen unten
   };
 }
 
@@ -264,24 +274,80 @@ function renderButtonSVG(config, outerMm, innerMm, sizePx, isPreview) {
     textGroup.setAttribute('clip-path', `url(#${clipId})`);
 
     config.texts.forEach(t => {
-      const textEl = document.createElementNS(SVG_NS, 'text');
-      // x,y are % of inner diameter, measured from inner-circle top-left
       const tx = (cx - innerR) + (t.x / 100) * (innerR * 2);
       const ty = (cy - innerR) + (t.y / 100) * (innerR * 2);
-      textEl.setAttribute('x', String(tx));
-      textEl.setAttribute('y', String(ty));
+      const fs = (t.size || 14) / MM_TO_PX;
+
+      // Shadow filter
+      if (t.shadowEnabled) {
+        const fId = `fshadow-${t.id}${isPreview ? '-p' : ''}`;
+        const filter = document.createElementNS(SVG_NS, 'filter');
+        filter.setAttribute('id', fId);
+        filter.setAttribute('x', '-50%'); filter.setAttribute('y', '-50%');
+        filter.setAttribute('width', '200%'); filter.setAttribute('height', '200%');
+        const fds = document.createElementNS(SVG_NS, 'feDropShadow');
+        fds.setAttribute('dx', String((t.shadowOffsetX || 2) / MM_TO_PX));
+        fds.setAttribute('dy', String((t.shadowOffsetY || 2) / MM_TO_PX));
+        fds.setAttribute('stdDeviation', String((t.shadowBlur || 3) / MM_TO_PX));
+        fds.setAttribute('flood-color', t.shadowColor || '#000000');
+        fds.setAttribute('flood-opacity', '1');
+        filter.appendChild(fds);
+        defs.appendChild(filter);
+      }
+
+      const textEl = document.createElementNS(SVG_NS, 'text');
       textEl.setAttribute('text-anchor', t.align || 'middle');
       textEl.setAttribute('dominant-baseline', 'middle');
       textEl.setAttribute('fill', t.color || '#000000');
-      const fs = (t.size || 14) / MM_TO_PX; // px → mm
       textEl.setAttribute('font-size', String(fs));
-      let fontFamily = t.font || 'sans-serif';
-      let fontWeight = t.bold ? 'bold' : 'normal';
-      let fontStyle = t.italic ? 'italic' : 'normal';
-      textEl.setAttribute('font-family', fontFamily);
-      textEl.setAttribute('font-weight', fontWeight);
-      textEl.setAttribute('font-style', fontStyle);
-      textEl.textContent = t.content || '';
+      textEl.setAttribute('font-family', t.font || 'sans-serif');
+      textEl.setAttribute('font-weight', t.bold ? 'bold' : 'normal');
+      textEl.setAttribute('font-style', t.italic ? 'italic' : 'normal');
+
+      if (t.shadowEnabled) {
+        textEl.setAttribute('filter', `url(#fshadow-${t.id}${isPreview ? '-p' : ''})`);
+      }
+      if (t.strokeEnabled) {
+        textEl.setAttribute('stroke', t.strokeColor || '#000000');
+        textEl.setAttribute('stroke-width', String((t.strokeWidth || 1) / MM_TO_PX));
+        textEl.setAttribute('paint-order', 'stroke fill');
+      }
+
+      if (t.arcRadius && t.arcRadius !== 0) {
+        // Arc text via textPath
+        const r = Math.abs(t.arcRadius);
+        const arcId = `arcpath-${t.id}${isPreview ? '-p' : ''}`;
+        const arcPath = document.createElementNS(SVG_NS, 'path');
+        // Positive: text bows upward → arc circle center is below the text position
+        // Negative: text bows downward → arc circle center is above the text position
+        const sign = t.arcRadius > 0 ? 1 : -1;
+        const arcCy = ty + sign * r;
+        // Build semicircle path: for upward bow (positive), arc goes counterclockwise on top
+        // SVG arc: M startX,startY A rx,ry x-rot large-arc-flag sweep-flag endX,endY
+        const sweep = t.arcRadius > 0 ? 0 : 1;
+        const d = `M ${tx - r},${arcCy} A ${r},${r} 0 0,${sweep} ${tx + r},${arcCy}`;
+        arcPath.setAttribute('id', arcId);
+        arcPath.setAttribute('d', d);
+        arcPath.setAttribute('fill', 'none');
+        defs.appendChild(arcPath);
+
+        const tpEl = document.createElementNS(SVG_NS, 'textPath');
+        tpEl.setAttribute('href', `#${arcId}`);
+        tpEl.setAttribute('startOffset', '50%');
+        tpEl.setAttribute('text-anchor', 'middle');
+        tpEl.textContent = t.content || '';
+        textEl.appendChild(tpEl);
+      } else {
+        textEl.setAttribute('x', String(tx));
+        textEl.setAttribute('y', String(ty));
+        textEl.textContent = t.content || '';
+      }
+
+      if (t.rotation) {
+        const existing = textEl.getAttribute('transform') || '';
+        textEl.setAttribute('transform', `${existing} rotate(${t.rotation},${tx},${ty})`);
+      }
+
       textGroup.appendChild(textEl);
     });
     svg.appendChild(textGroup);
@@ -457,6 +523,108 @@ function drawShapeCanvas(ctx, s, innerRpx, cx, cy) {
   if (s.type !== 'line') ctx.fill();
   if ((s.strokeWidth || 0) > 0) ctx.stroke();
   ctx.restore();
+}
+
+/**
+ * Draw a text layer on canvas.
+ */
+function drawTextCanvas(ctx, t, innerRpx, cx, cy, pxPerMm) {
+  const tx = (cx - innerRpx) + (t.x / 100) * (innerRpx * 2);
+  const ty = (cy - innerRpx) + (t.y / 100) * (innerRpx * 2);
+  // Canvas font size scales with canvas size; size is stored in "screen px at 96dpi"
+  // We convert to mm then back at canvas pxPerMm
+  const fsMm = (t.size || 14) / MM_TO_PX;
+  const fsPx = fsMm * pxPerMm;
+
+  ctx.save();
+  ctx.translate(tx, ty);
+  if (t.rotation) ctx.rotate(t.rotation * Math.PI / 180);
+
+  const fontStr = `${t.italic ? 'italic ' : ''}${t.bold ? 'bold ' : ''}${fsPx}px ${t.font || 'sans-serif'}`;
+  ctx.font = fontStr;
+  ctx.textAlign = t.align === 'start' ? 'left' : t.align === 'end' ? 'right' : 'center';
+  ctx.textBaseline = 'middle';
+
+  if (t.shadowEnabled) {
+    ctx.shadowColor = t.shadowColor || '#000000';
+    ctx.shadowBlur = (t.shadowBlur || 3) * pxPerMm;
+    ctx.shadowOffsetX = (t.shadowOffsetX || 2) * pxPerMm;
+    ctx.shadowOffsetY = (t.shadowOffsetY || 2) * pxPerMm;
+  }
+
+  const text = t.content || '';
+  if (t.arcRadius && t.arcRadius !== 0) {
+    const rPx = Math.abs(t.arcRadius) * pxPerMm;
+    if (t.strokeEnabled) {
+      ctx.strokeStyle = t.strokeColor || '#000000';
+      ctx.lineWidth = (t.strokeWidth || 1) * pxPerMm;
+      drawArcTextCanvas(ctx, text, t.arcRadius > 0 ? rPx : -rPx, fsPx, false);
+    }
+    ctx.fillStyle = t.color || '#000000';
+    drawArcTextCanvas(ctx, text, t.arcRadius > 0 ? rPx : -rPx, fsPx, true);
+  } else {
+    if (t.strokeEnabled) {
+      ctx.strokeStyle = t.strokeColor || '#000000';
+      ctx.lineWidth = (t.strokeWidth || 1) * pxPerMm;
+      ctx.strokeText(text, 0, 0);
+    }
+    ctx.fillStyle = t.color || '#000000';
+    ctx.fillText(text, 0, 0);
+  }
+  ctx.restore();
+}
+
+/**
+ * Draw arc text centered at origin.
+ * radiusPx > 0 = bow upward (∩, center highest), < 0 = bow downward (∪, center lowest).
+ * ctx must already be translated to the reference text position.
+ */
+function drawArcTextCanvas(ctx, text, radiusPx, fsPx, fill) {
+  // Minimum radius to prevent degenerate geometry at tiny values
+  const r = Math.max(Math.abs(radiusPx), 60);
+  const isUpward = radiusPx > 0;
+
+  const charWidths = Array.from(text).map(ch => ctx.measureText(ch).width);
+  const totalW = charWidths.reduce((a, b) => a + b, 0);
+  // Clamp angle span so text never wraps more than 270°
+  const angleSpan = Math.min(totalW / r, Math.PI * 1.5);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  if (isUpward) {
+    // ∩ bow: center char is highest, edges curve downward
+    // Circle center at (0, +r) below reference in canvas coords (Y goes down)
+    // Position at θ: x=r*sin(θ), y=r*(1−cos(θ))  →  at θ≠0, y>0 = edges go lower ✓
+    let θ = -angleSpan / 2;
+    for (let i = 0; i < text.length; i++) {
+      const cw = charWidths[i];
+      const midθ = θ + cw / (2 * r);
+      ctx.save();
+      ctx.translate(r * Math.sin(midθ), r * (1 - Math.cos(midθ)));
+      ctx.rotate(midθ);
+      if (fill) ctx.fillText(text[i], 0, 0);
+      else ctx.strokeText(text[i], 0, 0);
+      ctx.restore();
+      θ += cw / r;
+    }
+  } else {
+    // ∪ bow: center char is lowest, edges curve upward
+    // Circle center at (0, −r) above reference
+    // Position at θ: x=r*sin(θ), y=r*(cos(θ)−1)  →  at θ≠0, y<0 = edges go higher ✓
+    let θ = -angleSpan / 2;
+    for (let i = 0; i < text.length; i++) {
+      const cw = charWidths[i];
+      const midθ = θ + cw / (2 * r);
+      ctx.save();
+      ctx.translate(r * Math.sin(midθ), r * (Math.cos(midθ) - 1));
+      ctx.rotate(-midθ);
+      if (fill) ctx.fillText(text[i], 0, 0);
+      else ctx.strokeText(text[i], 0, 0);
+      ctx.restore();
+      θ += cw / r;
+    }
+  }
 }
 
 /**
@@ -637,17 +805,19 @@ function openEditor(pageId, slotIndex) {
   // Reset image input
   document.getElementById('ed-bg-image').value = '';
 
-  // Init widget (lazy) and show/hide image section
+  // Init widget (lazy)
   if (!imgWidget) imgWidget = new ImagePositionWidget();
-  const imgSection = document.getElementById('img-pos-section');
+
+  // Show/hide image controls
+  const imgControls = document.getElementById('img-pos-section');
   if (editingConfig.bgImage) {
-    imgSection.classList.remove('hidden');
+    imgControls.classList.remove('hidden');
     const zoomVal = editingConfig.imgScale || 1;
     document.getElementById('img-zoom').value = String(zoomVal);
     document.getElementById('img-zoom-val').textContent = `${zoomVal.toFixed(1)}×`;
     imgWidget.load(editingConfig.bgImage);
   } else {
-    imgSection.classList.add('hidden');
+    imgControls.classList.add('hidden');
     imgWidget.clear();
   }
 
@@ -655,10 +825,17 @@ function openEditor(pageId, slotIndex) {
   renderShapesList();
   renderTextsList();
 
-  // Update preview
-  updateEditorPreview();
-
   document.getElementById('modal-overlay').classList.remove('hidden');
+
+  // After layout, resize canvas to fill right panel
+  requestAnimationFrame(() => {
+    const panel = document.querySelector('.modal-preview');
+    if (!panel) return;
+    // Available height: panel height minus header, slider, button rows (~150px)
+    const size = Math.min(panel.clientWidth - 40, panel.clientHeight - 150, 520);
+    imgWidget.resize(Math.max(size, 280));
+    imgWidget.render();
+  });
 }
 
 function closeEditor() {
@@ -810,6 +987,103 @@ function buildTextEntry(t, i) {
   row3.appendChild(removeBtn);
   entry.appendChild(row3);
 
+  // Row 4 – Rotation + Arc
+  const row4 = document.createElement('div');
+  row4.className = 'text-entry-row';
+
+  const rotLbl = document.createElement('label');
+  rotLbl.textContent = 'Rotation (°)';
+  const rotInput = document.createElement('input');
+  rotInput.type = 'number'; rotInput.min = '-180'; rotInput.max = '180'; rotInput.value = t.rotation || 0;
+  rotInput.style.width = '62px';
+  rotInput.addEventListener('change', () => { t.rotation = parseFloat(rotInput.value) || 0; updateEditorPreview(); });
+  rotLbl.appendChild(rotInput);
+  row4.appendChild(rotLbl);
+
+  const arcLbl = document.createElement('label');
+  arcLbl.style.flex = '1';
+  const arcVal = t.arcRadius || 0;
+  arcLbl.textContent = `Bogen: ${arcVal > 0 ? '+' : ''}${arcVal} mm`;
+  const arcInput = document.createElement('input');
+  arcInput.type = 'range'; arcInput.min = '-100'; arcInput.max = '100'; arcInput.step = '1';
+  arcInput.value = arcVal;
+  arcInput.style.cssText = 'width:100%;accent-color:var(--accent)';
+  arcInput.addEventListener('input', () => {
+    t.arcRadius = parseInt(arcInput.value, 10);
+    arcLbl.textContent = `Bogen: ${t.arcRadius > 0 ? '+' : ''}${t.arcRadius} mm`;
+    updateEditorPreview();
+  });
+  arcLbl.appendChild(arcInput);
+  row4.appendChild(arcLbl);
+  entry.appendChild(row4);
+
+  // Row 5 – Shadow
+  const row5 = document.createElement('div');
+  row5.className = 'text-entry-row';
+
+  const shadowToggle = document.createElement('label');
+  shadowToggle.textContent = 'Schatten';
+  const shadowCb = document.createElement('input');
+  shadowCb.type = 'checkbox'; shadowCb.checked = !!t.shadowEnabled;
+  shadowCb.addEventListener('change', () => { t.shadowEnabled = shadowCb.checked; updateEditorPreview(); });
+  shadowToggle.appendChild(shadowCb);
+  row5.appendChild(shadowToggle);
+
+  const shColorLbl = document.createElement('label');
+  shColorLbl.textContent = 'Farbe';
+  const shColorInput = document.createElement('input');
+  shColorInput.type = 'color'; shColorInput.value = t.shadowColor || '#000000';
+  shColorInput.addEventListener('input', () => { t.shadowColor = shColorInput.value; updateEditorPreview(); });
+  shColorLbl.appendChild(shColorInput);
+  row5.appendChild(shColorLbl);
+
+  [
+    ['Unschärfe', 'shadowBlur', 0, 20, t.shadowBlur != null ? t.shadowBlur : 3],
+    ['OffsetX', 'shadowOffsetX', -20, 20, t.shadowOffsetX != null ? t.shadowOffsetX : 2],
+    ['OffsetY', 'shadowOffsetY', -20, 20, t.shadowOffsetY != null ? t.shadowOffsetY : 2],
+  ].forEach(([label, key, min, max, val]) => {
+    const lbl = document.createElement('label');
+    lbl.textContent = label;
+    const inp = document.createElement('input');
+    inp.type = 'number'; inp.min = String(min); inp.max = String(max); inp.value = val;
+    inp.style.width = '50px';
+    inp.addEventListener('change', () => { t[key] = parseFloat(inp.value) || 0; updateEditorPreview(); });
+    lbl.appendChild(inp);
+    row5.appendChild(lbl);
+  });
+  entry.appendChild(row5);
+
+  // Row 6 – Stroke/Outline
+  const row6 = document.createElement('div');
+  row6.className = 'text-entry-row';
+
+  const strokeToggle = document.createElement('label');
+  strokeToggle.textContent = 'Kontur';
+  const strokeCb = document.createElement('input');
+  strokeCb.type = 'checkbox'; strokeCb.checked = !!t.strokeEnabled;
+  strokeCb.addEventListener('change', () => { t.strokeEnabled = strokeCb.checked; updateEditorPreview(); });
+  strokeToggle.appendChild(strokeCb);
+  row6.appendChild(strokeToggle);
+
+  const stColorLbl = document.createElement('label');
+  stColorLbl.textContent = 'Farbe';
+  const stColorInput = document.createElement('input');
+  stColorInput.type = 'color'; stColorInput.value = t.strokeColor || '#000000';
+  stColorInput.addEventListener('input', () => { t.strokeColor = stColorInput.value; updateEditorPreview(); });
+  stColorLbl.appendChild(stColorInput);
+  row6.appendChild(stColorLbl);
+
+  const stWidthLbl = document.createElement('label');
+  stWidthLbl.textContent = 'Breite (mm)';
+  const stWidthInput = document.createElement('input');
+  stWidthInput.type = 'number'; stWidthInput.min = '0.1'; stWidthInput.max = '5'; stWidthInput.step = '0.1';
+  stWidthInput.value = t.strokeWidth != null ? t.strokeWidth : 1;
+  stWidthInput.style.width = '55px';
+  stWidthInput.addEventListener('change', () => { t.strokeWidth = parseFloat(stWidthInput.value) || 1; updateEditorPreview(); });
+  stWidthLbl.appendChild(stWidthInput);
+  row6.appendChild(stWidthLbl);
+  entry.appendChild(row6);
+
   return entry;
 }
 
@@ -957,14 +1231,8 @@ function buildShapeEntry(s, i) {
 }
 
 function updateEditorPreview() {
-  if (!editingConfig) return;
-  const { inner, outer } = project.buttonSize;
-  const previewSize = 330;
-  const container = document.getElementById('preview-container');
-  container.innerHTML = '';
-  const svg = renderButtonSVG(editingConfig, outer, inner, previewSize, true);
-  container.appendChild(svg);
-  if (imgWidget && editingConfig.bgImage) imgWidget.render();
+  if (!editingConfig || !imgWidget) return;
+  imgWidget.render();
 }
 
 function openPreviewZoom() {
@@ -1229,10 +1497,16 @@ class ImagePositionWidget {
     this.canvas = document.getElementById('img-pos-canvas');
     this.ctx = this.canvas.getContext('2d');
     this.eyedropperMode = false;
-    this.isDragging = false;
-    this.dragStart = null;
+    this.eyedropperCallback = null;
     this.imgEl = new Image();
     this.imgLoaded = false;
+
+    // Interaction state
+    this.sel = null;         // { type: 'shape'|'text', index } or null
+    this.iMode = null;       // 'move' | 'resize' | 'rotate' | 'imgdrag'
+    this.resizeDir = null;   // 'nw'|'ne'|'se'|'sw'
+    this.dragStart = null;   // { mx, my, origX, origY, origW, origH, origRot, origImgX, origImgY }
+
     this._bindEvents();
   }
 
@@ -1245,7 +1519,13 @@ class ImagePositionWidget {
   clear() {
     this.imgLoaded = false;
     this.imgEl.src = '';
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.render();
+  }
+
+  resize(size) {
+    this.canvas.width = size;
+    this.canvas.height = size;
+    this.render();
   }
 
   setEyedropper(on, callback) {
@@ -1253,11 +1533,12 @@ class ImagePositionWidget {
     this.eyedropperCallback = callback || null;
     this.canvas.classList.toggle('eyedropper-mode', on);
     document.getElementById('eyedropper-hint').classList.toggle('hidden', !on);
-    document.getElementById('btn-eyedropper').classList.toggle('active', on && !callback);
+    const btnEye = document.getElementById('btn-eyedropper');
+    if (btnEye) btnEye.classList.toggle('active', on && !callback);
   }
 
-  render() {
-    if (!editingConfig) return;
+  // ---- coordinate helpers ----
+  _metrics() {
     const { inner, outer } = project.buttonSize;
     const cpx = this.canvas.width;
     const pxPerMm = cpx / outer;
@@ -1265,11 +1546,81 @@ class ImagePositionWidget {
     const cy = cpx / 2;
     const outerRpx = (outer / 2) * pxPerMm;
     const innerRpx = (inner / 2) * pxPerMm;
+    return { cpx, pxPerMm, cx, cy, outerRpx, innerRpx };
+  }
+
+  _elBBox(el, innerRpx, cx, cy) {
+    const px = (cx - innerRpx) + (el.x / 100) * (innerRpx * 2);
+    const py = (cy - innerRpx) + (el.y / 100) * (innerRpx * 2);
+    const w  = (el.w / 100) * (innerRpx * 2);
+    const h  = (el.h / 100) * (innerRpx * 2);
+    return { px, py, w, h };
+  }
+
+  _textBBox(t, innerRpx, cx, cy, pxPerMm) {
+    const px = (cx - innerRpx) + (t.x / 100) * (innerRpx * 2);
+    const py = (cy - innerRpx) + (t.y / 100) * (innerRpx * 2);
+    const fsMm = (t.size || 14) / MM_TO_PX;
+    const fsPx = fsMm * pxPerMm;
+    const estW = fsPx * (t.content || '').length * 0.65;
+    const estH = fsPx * 1.3;
+    return { px, py, w: estW, h: estH };
+  }
+
+  // ---- hit test ----
+  _hitHandle(mx, my, hx, hy) {
+    return Math.abs(mx - hx) < 9 && Math.abs(my - hy) < 9;
+  }
+
+  _handlesFor(el, innerRpx, cx, cy, isText, pxPerMm) {
+    let px, py, w, h;
+    if (isText) {
+      ({ px, py, w, h } = this._textBBox(el, innerRpx, cx, cy, pxPerMm));
+    } else {
+      ({ px, py, w, h } = this._elBBox(el, innerRpx, cx, cy));
+    }
+    const hw = w / 2; const hh = h / 2;
+    return {
+      nw: { x: px - hw, y: py - hh },
+      ne: { x: px + hw, y: py - hh },
+      se: { x: px + hw, y: py + hh },
+      sw: { x: px - hw, y: py + hh },
+      n:  { x: px,      y: py - hh },
+      s:  { x: px,      y: py + hh },
+      e:  { x: px + hw, y: py      },
+      w:  { x: px - hw, y: py      },
+      rot:{ x: px,      y: py - hh - 22 },
+    };
+  }
+
+  _hitTestHandles(mx, my, el, innerRpx, cx, cy, isText, pxPerMm) {
+    const handles = this._handlesFor(el, innerRpx, cx, cy, isText, pxPerMm);
+    if (this._hitHandle(mx, my, handles.rot.x, handles.rot.y)) return 'rotate';
+    for (const dir of ['nw', 'ne', 'se', 'sw']) {
+      if (this._hitHandle(mx, my, handles[dir].x, handles[dir].y)) return 'resize-' + dir;
+    }
+    return null;
+  }
+
+  _pointInBBox(mx, my, el, innerRpx, cx, cy, isText, pxPerMm) {
+    let px, py, w, h;
+    if (isText) {
+      ({ px, py, w, h } = this._textBBox(el, innerRpx, cx, cy, pxPerMm));
+    } else {
+      ({ px, py, w, h } = this._elBBox(el, innerRpx, cx, cy));
+    }
+    return mx >= px - w/2 && mx <= px + w/2 && my >= py - h/2 && my <= py + h/2;
+  }
+
+  // ---- drawing ----
+  render() {
+    if (!editingConfig) return;
+    const { cpx, pxPerMm, cx, cy, outerRpx, innerRpx } = this._metrics();
     const ctx = this.ctx;
 
     ctx.clearRect(0, 0, cpx, cpx);
 
-    // Outer circle bg color
+    // Background fill
     ctx.save();
     ctx.beginPath();
     ctx.arc(cx, cy, outerRpx, 0, Math.PI * 2);
@@ -1277,7 +1628,7 @@ class ImagePositionWidget {
     ctx.fill();
     ctx.restore();
 
-    // Image clipped to outer circle (full button area incl. fold-over)
+    // Image clipped to outer circle
     if (this.imgLoaded) {
       const { imgX = 0, imgY = 0, imgScale = 1 } = editingConfig;
       const outerD = outerRpx * 2;
@@ -1307,6 +1658,16 @@ class ImagePositionWidget {
       ctx.restore();
     }
 
+    // Texts (clipped to inner circle)
+    if (editingConfig.texts && editingConfig.texts.length > 0) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, innerRpx, 0, Math.PI * 2);
+      ctx.clip();
+      editingConfig.texts.forEach(t => drawTextCanvas(ctx, t, innerRpx, cx, cy, pxPerMm));
+      ctx.restore();
+    }
+
     // Guide circles
     ctx.save();
     ctx.beginPath();
@@ -1314,11 +1675,64 @@ class ImagePositionWidget {
     ctx.strokeStyle = '#2196f3';
     ctx.lineWidth = 1.5;
     ctx.stroke();
+    const redW = (project && project.guideLineWidth) ? project.guideLineWidth * pxPerMm : 1.5;
     ctx.beginPath();
     ctx.arc(cx, cy, innerRpx, 0, Math.PI * 2);
     ctx.strokeStyle = '#e53935';
+    ctx.lineWidth = redW;
+    ctx.stroke();
+    ctx.restore();
+
+    // Selection handles
+    if (this.sel) {
+      const el = this.sel.type === 'shape'
+        ? editingConfig.shapes[this.sel.index]
+        : editingConfig.texts[this.sel.index];
+      if (el) this._drawHandles(ctx, el, innerRpx, cx, cy, this.sel.type === 'text', pxPerMm);
+    }
+  }
+
+  _drawHandles(ctx, el, innerRpx, cx, cy, isText, pxPerMm) {
+    const handles = this._handlesFor(el, innerRpx, cx, cy, isText, pxPerMm);
+    let px, py, w, h;
+    if (isText) {
+      ({ px, py, w, h } = this._textBBox(el, innerRpx, cx, cy, pxPerMm));
+    } else {
+      ({ px, py, w, h } = this._elBBox(el, innerRpx, cx, cy));
+    }
+
+    ctx.save();
+    // Dashed selection box
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 3]);
+    ctx.strokeRect(px - w/2, py - h/2, w, h);
+    ctx.setLineDash([]);
+
+    // Rotation handle line + circle
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(px, py - h/2);
+    ctx.lineTo(handles.rot.x, handles.rot.y);
+    ctx.stroke();
+    ctx.fillStyle = '#a855f7';
+    ctx.beginPath();
+    ctx.arc(handles.rot.x, handles.rot.y, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
     ctx.lineWidth = 1.5;
     ctx.stroke();
+
+    // Corner resize handles
+    for (const dir of ['nw', 'ne', 'se', 'sw']) {
+      const h2 = handles[dir];
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = '#7c3aed';
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(h2.x - 5, h2.y - 5, 10, 10);
+      ctx.strokeRect(h2.x - 5, h2.y - 5, 10, 10);
+    }
     ctx.restore();
   }
 
@@ -1328,31 +1742,129 @@ class ImagePositionWidget {
     c.addEventListener('mousedown', e => {
       if (this.eyedropperMode) return;
       e.preventDefault();
-      this.isDragging = true;
-      this.dragStart = {
-        x: e.offsetX, y: e.offsetY,
-        imgX: editingConfig ? (editingConfig.imgX || 0) : 0,
-        imgY: editingConfig ? (editingConfig.imgY || 0) : 0,
-      };
-      c.style.cursor = 'grabbing';
+      const mx = e.offsetX, my = e.offsetY;
+      const { pxPerMm, cx, cy, outerRpx, innerRpx } = this._metrics();
+
+      // 1. Check handles of currently selected element
+      if (this.sel) {
+        const el = this.sel.type === 'shape'
+          ? editingConfig.shapes[this.sel.index]
+          : editingConfig.texts[this.sel.index];
+        if (el) {
+          const hit = this._hitTestHandles(mx, my, el, innerRpx, cx, cy, this.sel.type === 'text', pxPerMm);
+          if (hit) {
+            this.iMode = hit === 'rotate' ? 'rotate' : 'resize';
+            this.resizeDir = hit === 'rotate' ? null : hit.replace('resize-', '');
+            const bbox = this.sel.type === 'text'
+              ? this._textBBox(el, innerRpx, cx, cy, pxPerMm)
+              : this._elBBox(el, innerRpx, cx, cy);
+            this.dragStart = {
+              mx, my,
+              origX: el.x, origY: el.y,
+              origW: el.w || 40, origH: el.h || 40,
+              origRot: el.rotation || 0,
+              bboxPx: bbox.px, bboxPy: bbox.py,
+            };
+            return;
+          }
+        }
+      }
+
+      // 2. Hit-test shapes (reverse = topmost first)
+      const shapes = editingConfig.shapes || [];
+      for (let i = shapes.length - 1; i >= 0; i--) {
+        if (this._pointInBBox(mx, my, shapes[i], innerRpx, cx, cy, false, pxPerMm)) {
+          this.sel = { type: 'shape', index: i };
+          this.iMode = 'move';
+          this.dragStart = { mx, my, origX: shapes[i].x, origY: shapes[i].y };
+          this.render();
+          return;
+        }
+      }
+
+      // 3. Hit-test texts (reverse = topmost first)
+      const texts = editingConfig.texts || [];
+      for (let i = texts.length - 1; i >= 0; i--) {
+        if (this._pointInBBox(mx, my, texts[i], innerRpx, cx, cy, true, pxPerMm)) {
+          this.sel = { type: 'text', index: i };
+          this.iMode = 'move';
+          this.dragStart = { mx, my, origX: texts[i].x, origY: texts[i].y };
+          this.render();
+          return;
+        }
+      }
+
+      // 4. Deselect + image drag
+      this.sel = null;
+      if (this.imgLoaded) {
+        this.iMode = 'imgdrag';
+        this.dragStart = {
+          mx, my,
+          origImgX: editingConfig.imgX || 0,
+          origImgY: editingConfig.imgY || 0,
+        };
+        c.style.cursor = 'grabbing';
+      }
+      this.render();
     });
 
     c.addEventListener('mousemove', e => {
-      if (!this.isDragging || !editingConfig) return;
-      const pxPerMm = this.canvas.width / project.buttonSize.outer;
-      editingConfig.imgX = this.dragStart.imgX + (e.offsetX - this.dragStart.x) / pxPerMm;
-      editingConfig.imgY = this.dragStart.imgY + (e.offsetY - this.dragStart.y) / pxPerMm;
+      if (!this.iMode || !editingConfig) return;
+      const mx = e.offsetX, my = e.offsetY;
+      const { pxPerMm, cx, cy, innerRpx } = this._metrics();
+      const dx = mx - this.dragStart.mx;
+      const dy = my - this.dragStart.my;
+      const innerD = innerRpx * 2;
+
+      const el = this.sel ? (
+        this.sel.type === 'shape'
+          ? editingConfig.shapes[this.sel.index]
+          : editingConfig.texts[this.sel.index]
+      ) : null;
+
+      if (this.iMode === 'imgdrag') {
+        editingConfig.imgX = this.dragStart.origImgX + dx / pxPerMm;
+        editingConfig.imgY = this.dragStart.origImgY + dy / pxPerMm;
+
+      } else if (this.iMode === 'move' && el) {
+        el.x = Math.max(0, Math.min(100, this.dragStart.origX + (dx / innerD) * 100));
+        el.y = Math.max(0, Math.min(100, this.dragStart.origY + (dy / innerD) * 100));
+
+      } else if (this.iMode === 'resize' && el && this.sel.type === 'shape') {
+        const dPct = (Math.abs(dx) + Math.abs(dy)) / (innerD) * 100;
+        const grow = (dx + dy) > 0 ? 1 : -1;
+        const dir = this.resizeDir;
+        const wDelta = (dir === 'ne' || dir === 'se') ? (dx / innerD) * 100 : (-dx / innerD) * 100;
+        const hDelta = (dir === 'se' || dir === 'sw') ? (dy / innerD) * 100 : (-dy / innerD) * 100;
+        el.w = Math.max(2, this.dragStart.origW + wDelta * 2);
+        el.h = Math.max(2, this.dragStart.origH + hDelta * 2);
+
+      } else if (this.iMode === 'rotate' && el) {
+        const elPx = this.dragStart.bboxPx;
+        const elPy = this.dragStart.bboxPy;
+        const angle = Math.atan2(my - elPy, mx - elPx) * (180 / Math.PI) + 90;
+        el.rotation = Math.round(angle);
+      }
+
       this.render();
-      updateEditorPreview();
     });
 
     c.addEventListener('mouseup', () => {
-      this.isDragging = false;
-      if (!this.eyedropperMode) c.style.cursor = 'grab';
+      const wasInteracting = this.iMode && this.iMode !== null;
+      this.iMode = null;
+      this.dragStart = null;
+      this.resizeDir = null;
+      c.style.cursor = 'default';
+      if (wasInteracting && this.sel) {
+        syncFormAfterCanvasEdit();
+      }
     });
 
     c.addEventListener('mouseleave', () => {
-      this.isDragging = false;
+      if (this.iMode === 'imgdrag') {
+        this.iMode = null;
+        this.dragStart = null;
+      }
     });
 
     c.addEventListener('click', e => {
@@ -1363,19 +1875,29 @@ class ImagePositionWidget {
       if (this.eyedropperCallback) {
         this.eyedropperCallback(hex);
       } else {
-        // Default: set bgColor
         if (editingConfig) editingConfig.bgColor = hex;
         document.getElementById('ed-bg-color').value = hex;
-        updateEditorPreview();
+        this.render();
       }
       this.setEyedropper(false);
-      this.render();
+    });
+
+    c.addEventListener('dblclick', () => {
+      // Double-click canvas: open SVG zoom overlay
+      openPreviewZoom();
     });
   }
 }
 
 /** @type {ImagePositionWidget|null} */
 let imgWidget = null;
+
+/** After canvas drag/resize/rotate, rebuild form UI to reflect new values. */
+function syncFormAfterCanvasEdit() {
+  if (!editingConfig) return;
+  renderShapesList();
+  renderTextsList();
+}
 
 // ============================================================
 // EVENT WIRING
@@ -1563,7 +2085,7 @@ function initEvents() {
   });
 
   // Preview zoom
-  document.getElementById('preview-container').addEventListener('click', openPreviewZoom);
+  document.getElementById('btn-preview-zoom').addEventListener('click', openPreviewZoom);
   document.getElementById('preview-zoom-overlay').addEventListener('click', closePreviewZoom);
 
   // Modal – save/cancel/save-as-template

@@ -6,6 +6,28 @@ Versionierung nach `X.Y.Z` (siehe README).
 
 ---
 
+## [0.3.0] – 2026-04-30
+
+### Hinzugefügt
+- **Interaktiver Canvas-Editor**: Canvas ist jetzt das zentrale Bearbeitungsfenster (rechtes Panel); SVG-Ansicht nur noch im Zoom-Overlay (Doppelklick oder „Druckvorschau"-Button)
+- **Text – Schatten**: Checkbox + Farbe, Unschärfe, OffsetX/OffsetY pro Text-Ebene
+- **Text – Kontur (Outline)**: Checkbox + Farbe + Breite in mm pro Text-Ebene
+- **Text – Bogen-Radius**: Schieberegler –100 bis +100 mm; positiv = Bogen oben, negativ = Bogen unten
+- **Text – Rotation**: Grad-Eingabe pro Text-Ebene
+- **Drag&Drop Text**: Text-Ebene im Canvas anklicken und ziehen → X/Y wird aktualisiert
+- **Drag&Drop Formen**: Form im Canvas anklicken und ziehen → X/Y wird aktualisiert
+- **Resize-Handles (Formen)**: 4 Eck-Handles im Canvas skalieren Breite/Höhe
+- **Rotations-Handle (Text + Formen)**: lila Kreis-Handle dreht das Element
+- **Modal 90 % Fenstergröße**: Editor nutzt jetzt 90 vw × 90 vh
+- **Doppelklick auf Canvas** öffnet die SVG-Druckvorschau im Overlay
+
+### Geändert
+- Canvas immer sichtbar (nicht mehr nur bei geladenem Bild)
+- Bild-Toolbar (Pipette, Zoom, Reset) erscheint nur, wenn ein Bild geladen ist
+- `updateEditorPreview()` rendert direkt auf den Canvas (kein separater SVG-Vorschau-Container mehr)
+
+---
+
 ## [0.2.6] – 2026-04-30
 
 ### Geändert
@@ -19,6 +41,8 @@ Versionierung nach `X.Y.Z` (siehe README).
 ### Geändert
 - Regler „Linienstärke (rot)" aus der Sidebar ins Editor-Modal verschoben (unterhalb der Vorschau) – nur beim Bearbeiten relevant
 - Neue Standard-Größe hinzugefügt: **58 mm** (Innen 58 / Außen 70)
+
+---
 
 ---
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ButtonsMaker v0.2.6</title>
+  <title>ButtonsMaker v0.3.0</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -15,7 +15,7 @@
         <div class="header-logo-icon">🔘</div>
         <h1>ButtonsMaker</h1>
       </div>
-      <span class="version-badge">v0.2.6</span>
+      <span class="version-badge">v0.3.0</span>
     </div>
     <div class="header-right">
       <button id="btn-save-project" title="Projekt speichern (LocalStorage + Download)">💾 Speichern</button>
@@ -102,7 +102,10 @@
         <div class="modal-controls">
 
           <label class="ctrl-label">Hintergrundfarbe
-            <input type="color" id="ed-bg-color" value="#ffffff" />
+            <div style="display:flex;align-items:center;gap:7px">
+              <input type="color" id="ed-bg-color" value="#ffffff" />
+              <button id="btn-eyedropper" class="btn-small" title="Farbe aus Bild aufnehmen">🔬 Pipette</button>
+            </div>
           </label>
 
           <label class="ctrl-label">Hintergrundbild
@@ -110,22 +113,14 @@
             <button id="ed-bg-image-clear" class="btn-small">Bild entfernen</button>
           </label>
 
-          <!-- Image position + eyedropper (visible only when image loaded) -->
+          <!-- Image zoom (visible only when image loaded) -->
           <div id="img-pos-section" class="hidden">
-            <div class="img-pos-header">
-              <span>Bild-Position</span>
-              <button id="btn-eyedropper" class="btn-small" title="Farbe aus Bild aufnehmen">🔬 Pipette</button>
-              <button id="btn-img-reset" class="btn-small" title="Position &amp; Zoom zurücksetzen">↺ Reset</button>
-            </div>
-            <div class="img-pos-canvas-wrap">
-              <canvas id="img-pos-canvas" width="220" height="220"></canvas>
-              <div id="eyedropper-hint" class="hidden">Klicke auf eine Farbe im Bild</div>
-            </div>
-            <label class="ctrl-label zoom-row">
-              <span>Zoom</span>
+            <div class="guide-slider-row" style="gap:8px">
+              <span style="font-size:10px;color:var(--text-3);white-space:nowrap">🔍 Zoom</span>
               <input type="range" id="img-zoom" min="0.5" max="3" step="0.05" value="1" />
               <span id="img-zoom-val">1.0×</span>
-            </label>
+              <button id="btn-img-reset" class="btn-small" title="Position &amp; Zoom zurücksetzen">↺</button>
+            </div>
           </div>
 
           <!-- Shapes section -->
@@ -153,15 +148,21 @@
 
         </div>
 
-        <!-- Right: preview -->
+        <!-- Right: interactive canvas editor -->
         <div class="modal-preview">
-          <h3>Vorschau <span class="preview-hint">· Klick zum Vergrößern</span></h3>
-          <div id="preview-container" title="Klick zum Vergrößern"></div>
-          <div class="guide-slider-row" style="width:100%;margin-top:4px;">
+          <div class="editor-canvas-header">
+            <span class="preview-title">Editor <span class="preview-hint">· Klick = Auswählen · Drag = Verschieben · Handles = Skalieren/Drehen</span></span>
+            <div id="img-controls" class="hidden">
+              <div id="eyedropper-hint" class="hidden" style="font-size:10px;color:#c4b5fd;padding:2px 8px;background:rgba(0,0,0,.8);border-radius:99px;border:1px solid rgba(124,58,237,.4)">Klicke auf eine Farbe im Bild</div>
+            </div>
+          </div>
+          <canvas id="img-pos-canvas" width="480" height="480"></canvas>
+          <div class="guide-slider-row" style="width:100%;margin-top:6px;">
             <span style="font-size:10px;color:var(--text-3);white-space:nowrap">🔴 Linienstärke</span>
             <input type="range" id="guide-line-width" min="0.2" max="3" step="0.1" value="0.4" />
             <span id="guide-line-val">0.4 mm</span>
           </div>
+          <button id="btn-preview-zoom" class="btn-small" style="margin-top:4px;">🔍 Druckvorschau (SVG)</button>
         </div>
       </div>
     </div>
