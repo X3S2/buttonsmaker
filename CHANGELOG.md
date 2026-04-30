@@ -6,6 +6,14 @@ Versionierung nach `X.Y.Z` (siehe README).
 
 ---
 
+## [0.3.1] – 2026-04-30
+
+### Behoben
+- **Bogen-Regler (Text)**: Nach dem ersten Ziehen verschwand der Schieberegler – Ursache war `.textContent = …` auf dem übergeordneten `<label>`, was alle Kind-Elemente (inkl. `<input>`) löschte. Jetzt wird ein separates `<span>` für den Anzeigetext verwendet, der Regler bleibt dauerhaft erhalten.
+- **Deckkraft-Regler (Formen)**: Gleicher Fehler in `buildShapeEntry()` – ebenfalls mit `<span>`-Trennung behoben.
+
+---
+
 ## [0.3.0] – 2026-04-30
 
 ### Hinzugefügt

@@ -8,6 +8,9 @@
 
 ## Features / Funktionen
 
+- **Interaktiver Canvas-Editor** – Text und Formen per Drag & Drop verschieben, rotieren und skalieren direkt im Editor-Modal
+- **Text-Effekte (WordArt)** – Schatten (Farbe, Unschärfe, Offset), Konturlinie (Farbe, Breite) und Bogen-Radius (−100 bis +100 mm) pro Text-Ebene
+- **Formen-Editor** – Kreis, Ellipse, Rechteck, abgerundetes Rechteck, Dreieck, Stern, Linie – mit Füllfarbe, Deckkraft, Kontur, Position, Rotation
 - **A4-Layout-Optimierung** – Platziert automatisch so viele Buttons wie möglich auf einer DIN-A4-Seite
 - **Button-Konfigurator** – Hintergrundfarbe, Bild-Upload, mehrzeiliger Text (Schrift, Größe, Farbe, Position)
 - **Druckführungskreise** – Roter Kreis (sichtbarer Druckbereich) + blauer Kreis (Falzbereich) werden mitgedruckt
@@ -71,4 +74,4 @@ MIT License – freie Nutzung, Weitergabe und Anpassung.
 
 ---
 
-*Erstellt mit Claude Code – [ButtonsMaker auf GitHub](https://github.com/X3S2/buttonsmaker)*
+*Erstellt mit Claude Code – [ButtonsMaker auf GitHub](https://github.com/X3S2/buttonsmaker)* · v0.3.1

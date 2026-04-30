@@ -1003,14 +1003,16 @@ function buildTextEntry(t, i) {
   const arcLbl = document.createElement('label');
   arcLbl.style.flex = '1';
   const arcVal = t.arcRadius || 0;
-  arcLbl.textContent = `Bogen: ${arcVal > 0 ? '+' : ''}${arcVal} mm`;
+  const arcSpan = document.createElement('span');
+  arcSpan.textContent = `Bogen: ${arcVal > 0 ? '+' : ''}${arcVal} mm`;
+  arcLbl.appendChild(arcSpan);
   const arcInput = document.createElement('input');
   arcInput.type = 'range'; arcInput.min = '-100'; arcInput.max = '100'; arcInput.step = '1';
   arcInput.value = arcVal;
   arcInput.style.cssText = 'width:100%;accent-color:var(--accent)';
   arcInput.addEventListener('input', () => {
     t.arcRadius = parseInt(arcInput.value, 10);
-    arcLbl.textContent = `Bogen: ${t.arcRadius > 0 ? '+' : ''}${t.arcRadius} mm`;
+    arcSpan.textContent = `Bogen: ${t.arcRadius > 0 ? '+' : ''}${t.arcRadius} mm`;
     updateEditorPreview();
   });
   arcLbl.appendChild(arcInput);
@@ -1173,14 +1175,16 @@ function buildShapeEntry(s, i) {
 
   const opacLbl = document.createElement('label');
   opacLbl.style.flex = '1';
-  opacLbl.textContent = `Deckkraft (${Math.round((s.fillOpacity || 1) * 100)}%)`;
+  const opacSpan = document.createElement('span');
+  opacSpan.textContent = `Deckkraft (${Math.round((s.fillOpacity || 1) * 100)}%)`;
+  opacLbl.appendChild(opacSpan);
   const opacSlider = document.createElement('input');
   opacSlider.type = 'range'; opacSlider.min = '0'; opacSlider.max = '1'; opacSlider.step = '0.05';
   opacSlider.value = String(s.fillOpacity != null ? s.fillOpacity : 1);
   opacSlider.style.cssText = 'width:100%;accent-color:var(--accent)';
   opacSlider.addEventListener('input', () => {
     s.fillOpacity = parseFloat(opacSlider.value);
-    opacLbl.textContent = `Deckkraft (${Math.round(s.fillOpacity * 100)}%)`;
+    opacSpan.textContent = `Deckkraft (${Math.round(s.fillOpacity * 100)}%)`;
     if (imgWidget) imgWidget.render(); updateEditorPreview();
   });
   opacLbl.appendChild(opacSlider);
