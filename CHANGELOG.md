@@ -6,7 +6,22 @@ Versionierung nach `X.Y.Z` (siehe README).
 
 ---
 
-## [0.2.3] – 2026-04-30 19:04
+## [0.2.5] – 2026-04-30 19:41
+
+### Geändert
+- Regler „Linienstärke (rot)" aus der Sidebar ins Editor-Modal verschoben (unterhalb der Vorschau) – nur beim Bearbeiten relevant
+- Neue Standard-Größe hinzugefügt: **58 mm** (Innen 58 / Außen 70)
+
+---
+
+
+
+### Hinzugefügt
+- Regler „Führungslinie (rot)" in der Sidebar: Strichstärke des roten Innenkreises einstellbar von 0.2 bis 3 mm (Standard 0.4 mm), wird im Projekt gespeichert
+
+---
+
+
 
 ### Geändert
 - Vorschau-Panel im Editor vergrößert: Breite 256 → 340 px, SVG-Größe 210 → 290 px

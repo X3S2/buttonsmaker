@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ButtonsMaker v0.2.3</title>
+  <title>ButtonsMaker v0.2.5</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -15,7 +15,7 @@
         <div class="header-logo-icon">🔘</div>
         <h1>ButtonsMaker</h1>
       </div>
-      <span class="version-badge">v0.2.3</span>
+      <span class="version-badge">v0.2.5</span>
     </div>
     <div class="header-right">
       <button id="btn-save-project" title="Projekt speichern (LocalStorage + Download)">💾 Speichern</button>
@@ -38,6 +38,7 @@
           <option value="37|51" selected>37 mm (Innen 37 / Außen 51)</option>
           <option value="50|64">50 mm (Innen 50 / Außen 64)</option>
           <option value="56|70">56 mm (Innen 56 / Außen 70)</option>
+          <option value="58|70">58 mm (Innen 58 / Außen 70)</option>
           <option value="75|89">75 mm (Innen 75 / Außen 89)</option>
           <option value="custom|custom">Benutzerdefiniert …</option>
         </select>
@@ -156,6 +157,11 @@
         <div class="modal-preview">
           <h3>Vorschau <span class="preview-hint">· Klick zum Vergrößern</span></h3>
           <div id="preview-container" title="Klick zum Vergrößern"></div>
+          <div class="guide-slider-row" style="width:100%;margin-top:4px;">
+            <span style="font-size:10px;color:var(--text-3);white-space:nowrap">🔴 Linienstärke</span>
+            <input type="range" id="guide-line-width" min="0.2" max="3" step="0.1" value="0.4" />
+            <span id="guide-line-val">0.4 mm</span>
+          </div>
         </div>
       </div>
     </div>

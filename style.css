@@ -219,6 +219,16 @@ button.active {
 #custom-size-row label { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-2); }
 #custom-size-row input { width: 70px; margin-bottom: 0; flex-shrink: 0; }
 
+.guide-slider-row {
+  display: flex; align-items: center; gap: 9px;
+}
+.guide-slider-row input[type="range"] {
+  flex: 1; accent-color: #e53935; height: 3px;
+}
+.guide-slider-row span {
+  font-size: 11px; color: var(--text-2); min-width: 40px; text-align: right;
+}
+
 #selected-actions { display: flex; flex-direction: column; gap: 6px; }
 #selected-actions button { width: 100%; text-align: left; padding: 7px 10px; }
 

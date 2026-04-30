@@ -1,5 +1,5 @@
 /* ============================================================
-   ButtonsMaker – app.js  v0.2.3
+   ButtonsMaker – app.js  v0.2.5
    Pure HTML/CSS/JS – keine Abhängigkeiten
    ============================================================ */
 
@@ -21,6 +21,7 @@ const PRESETS = [
   { label: '37mm', inner: 37, outer: 51 },
   { label: '50mm', inner: 50, outer: 64 },
   { label: '56mm', inner: 56, outer: 70 },
+  { label: '58mm', inner: 58, outer: 70 },
   { label: '75mm', inner: 75, outer: 89 },
 ];
 
@@ -153,6 +154,7 @@ function makeProject() {
   return {
     version: '0.1.0',
     buttonSize: size,
+    guideLineWidth: 0.4,   // mm – Dicke der roten Innenkreis-Führungslinie
     pages: [makePage(size.outer)],
   };
 }
@@ -286,7 +288,8 @@ function renderButtonSVG(config, outerMm, innerMm, sizePx, isPreview) {
   }
 
   // ---- Guide circles (printed) ----
-  const strokeW = 0.4; // mm – thin cut line
+  const strokeW = 0.4; // mm – blauer Außenkreis bleibt dünn
+  const redStrokeW = (project && project.guideLineWidth) ? project.guideLineWidth : 0.4;
 
   // Blue outer circle
   const blueCircle = document.createElementNS(SVG_NS, 'circle');
@@ -303,7 +306,7 @@ function renderButtonSVG(config, outerMm, innerMm, sizePx, isPreview) {
   redCircle.setAttribute('r', String(innerR));
   redCircle.setAttribute('fill', 'none');
   redCircle.setAttribute('stroke', '#e53935');
-  redCircle.setAttribute('stroke-width', String(strokeW));
+  redCircle.setAttribute('stroke-width', String(redStrokeW));
   redCircle.classList.add('no-print');
   svg.appendChild(redCircle);
 
@@ -625,6 +628,11 @@ function openEditor(pageId, slotIndex) {
 
   // Populate modal fields
   document.getElementById('ed-bg-color').value = editingConfig.bgColor || '#ffffff';
+
+  // Sync guide line slider to current project value
+  const glw = project.guideLineWidth || 0.4;
+  document.getElementById('guide-line-width').value = glw;
+  document.getElementById('guide-line-val').textContent = `${glw.toFixed(1)} mm`;
 
   // Reset image input
   document.getElementById('ed-bg-image').value = '';
@@ -1374,6 +1382,14 @@ let imgWidget = null;
 // ============================================================
 
 function initEvents() {
+  // Guide line width
+  document.getElementById('guide-line-width').addEventListener('input', e => {
+    project.guideLineWidth = parseFloat(e.target.value);
+    document.getElementById('guide-line-val').textContent = `${project.guideLineWidth.toFixed(1)} mm`;
+    renderPages();
+    autosave();
+  });
+
   // Size preset
   document.getElementById('size-preset').addEventListener('change', applySizeFromSelect);
   document.getElementById('btn-apply-custom').addEventListener('click', () => {
