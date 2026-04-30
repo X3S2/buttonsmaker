@@ -6,6 +6,14 @@ Versionierung nach `X.Y.Z` (siehe README).
 
 ---
 
+## [0.2.6] – 2026-04-30
+
+### Geändert
+- Regler „Linienstärke (rot)" aktualisiert jetzt auch die Vorschau im Editor-Modal (nicht nur die Hauptseite)
+- Vorschau im Editor-Modal vergrößert: 290 px → 330 px (~14 % größer)
+
+---
+
 ## [0.2.5] – 2026-04-30 19:41
 
 ### Geändert

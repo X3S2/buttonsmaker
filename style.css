@@ -395,7 +395,7 @@ button.active {
   cursor: zoom-in;
   position: relative;
 }
-#preview-container svg { max-width: 290px; max-height: 290px; }
+#preview-container svg { max-width: 330px; max-height: 330px; }
 #preview-container:hover svg {
   filter: drop-shadow(0 0 12px rgba(124,58,237,.5));
   transform: scale(1.04);

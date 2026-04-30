@@ -959,7 +959,7 @@ function buildShapeEntry(s, i) {
 function updateEditorPreview() {
   if (!editingConfig) return;
   const { inner, outer } = project.buttonSize;
-  const previewSize = 290;
+  const previewSize = 330;
   const container = document.getElementById('preview-container');
   container.innerHTML = '';
   const svg = renderButtonSVG(editingConfig, outer, inner, previewSize, true);
@@ -1387,6 +1387,7 @@ function initEvents() {
     project.guideLineWidth = parseFloat(e.target.value);
     document.getElementById('guide-line-val').textContent = `${project.guideLineWidth.toFixed(1)} mm`;
     renderPages();
+    updateEditorPreview();
     autosave();
   });
 
