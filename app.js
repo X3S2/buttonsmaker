@@ -1,5 +1,5 @@
 /* ============================================================
-   ButtonsMaker – app.js  v0.1.0
+   ButtonsMaker – app.js  v0.1.1
    Pure HTML/CSS/JS – keine Abhängigkeiten
    ============================================================ */
 
@@ -26,6 +26,7 @@ const PRESETS = [
 
 const LS_PROJECT_KEY = 'buttonsmaker_project';
 const LS_TEMPLATES_KEY = 'buttonsmaker_templates';
+const GAP_MM = 2; // Mindestabstand zwischen den Außenkreisen benachbarter Buttons (mm)
 
 // ============================================================
 // STATE
@@ -84,17 +85,14 @@ function makeTextLayer() {
  * @returns {{cols:number, rows:number, marginHmm:number, marginVmm:number, spacingHmm:number, spacingVmm:number}}
  */
 function calcLayout(outerMm) {
-  const cols = Math.max(1, Math.floor(A4_MM_W / outerMm));
-  const rows = Math.max(1, Math.floor(A4_MM_H / outerMm));
-  const totalW = cols * outerMm;
-  const totalH = rows * outerMm;
-  const freeH = A4_MM_W - totalW;
-  const freeV = A4_MM_H - totalH;
-  // Distribute space as margins (edge) and spacing (between)
-  // Equal spacing: margin = spacing = free / (count + 1)
-  const spacingH = cols > 0 ? freeH / (cols + 1) : freeH / 2;
-  const spacingV = rows > 0 ? freeV / (rows + 1) : freeV / 2;
-  return { cols, rows, marginHmm: spacingH, marginVmm: spacingV, spacingHmm: spacingH, spacingVmm: spacingV };
+  // Maximale Spalten/Zeilen bei 2mm Pflichtabstand zwischen Buttons:
+  // N*(outer + GAP) - GAP <= A4  →  N <= (A4 + GAP) / (outer + GAP)
+  const cols = Math.max(1, Math.floor((A4_MM_W + GAP_MM) / (outerMm + GAP_MM)));
+  const rows = Math.max(1, Math.floor((A4_MM_H + GAP_MM) / (outerMm + GAP_MM)));
+  // Verbleibenden Rand links/rechts bzw. oben/unten gleichmäßig verteilen
+  const marginHmm = Math.max(0, (A4_MM_W - cols * outerMm - (cols - 1) * GAP_MM) / 2);
+  const marginVmm = Math.max(0, (A4_MM_H - rows * outerMm - (rows - 1) * GAP_MM) / 2);
+  return { cols, rows, marginHmm, marginVmm, spacingHmm: GAP_MM, spacingVmm: GAP_MM };
 }
 
 /**
@@ -246,13 +244,14 @@ function renderButtonSVG(config, outerMm, innerMm, sizePx, isPreview) {
   blueCircle.setAttribute('stroke-width', String(strokeW));
   svg.appendChild(blueCircle);
 
-  // Red inner circle
+  // Red inner circle – NOT printed (no-print class)
   const redCircle = document.createElementNS(SVG_NS, 'circle');
   redCircle.setAttribute('cx', String(cx)); redCircle.setAttribute('cy', String(cy));
   redCircle.setAttribute('r', String(innerR));
   redCircle.setAttribute('fill', 'none');
   redCircle.setAttribute('stroke', '#e53935');
   redCircle.setAttribute('stroke-width', String(strokeW));
+  redCircle.classList.add('no-print');
   svg.appendChild(redCircle);
 
   // ---- Selection ring (not printed) ----

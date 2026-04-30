@@ -6,6 +6,14 @@ Versionierung nach `X.Y.Z` (siehe README).
 
 ---
 
+## [0.1.1] – 2026-04-30 16:52
+
+### Geändert
+- Button-Abstand: fester Mindestabstand von 2 mm zwischen den Außenkreisen benachbarter Buttons (horizontal und vertikal), überschüssiger Platz wird als Rand verteilt
+- Innenkreis (rot) wird beim Drucken ausgeblendet (`no-print`); nur der Außenkreis (blau) wird mitgedruckt
+
+---
+
 ## [0.1.0] – 2026-04-30 16:17
 
 ### Hinzugefügt
